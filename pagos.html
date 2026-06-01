@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Pagos | Hotel Central</title>
+    
+    <link rel="icon" type="image/png" href="img/logo.png" />
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=700&family=Lato:wght=300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        .table-container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-top: 20px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th { text-align: left; padding: 15px; border-bottom: 2px solid #f1f5f9; color: #64748b; text-transform: uppercase; font-size: 11px; }
+        td { padding: 15px; border-bottom: 1px solid #eee; color: #1e293b; }
+        
+        .filters-bar { display: flex; align-items: center; gap: 15px; background: white; padding: 15px 25px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 5px solid var(--amarillo-ocre); }
+        .filter-group { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #1e293b; }
+        .filter-group input { padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+
+        .btn-excel { background: #166534; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 700; transition: 0.3s; font-size: 13px; }
+        .btn-excel:hover { background: #0e4b25; transform: translateY(-2px); }
+        
+        .btn-detalle { background: transparent; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: 0.2s; color: var(--marron-zocalo); display: flex; align-items: center; gap: 5px; width: 100%; justify-content: space-between; }
+        .btn-detalle:hover { background: #f1f5f9; border-color: var(--vino-tinto); color: var(--vino-tinto); }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="logo-box">
+                <div class="logo-icon"><img src="img/logo.jpeg" style="width: 100%; border-radius: 8px;"></div>
+                <div><h3>Hotel Central</h3><p>Administración</p></div>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-link"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+                <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+                <a href="pagos.html" class="nav-link active"><i class="fa-solid fa-file-invoice-dollar"></i> Registro Pagos</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h2>Registro de Pagos</h2>
+                    <p id="current-date" style="font-size: 0.85rem; color: #64748b;"></p>
+                </div>
+                <button id="btnExportar" class="btn-excel" title="Exportar a Excel">
+                    <i class="fa-solid fa-file-excel"></i>
+                </button>
+            </header>
+
+            <div class="filters-bar">
+                <div class="filter-group"><i class="fa-solid fa-calendar-day"></i> Desde: <input type="date" id="fechaInicio"></div>
+                <div class="filter-group"><i class="fa-solid fa-calendar-day"></i> Hasta: <input type="date" id="fechaFin"></div>
+                <button id="btnLimpiar" style="background:none; border:none; color:#800020; cursor:pointer; font-size:12px; font-weight:700;">
+                    <i class="fa-solid fa-eraser"></i> Limpiar Filtros
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table id="tablaPagos">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Huésped</th>
+                            <th>Emitido por</th> 
+                            <th>Método</th>
+                            <th>Hospedaje</th>
+                            <th>Consumos</th>
+                            <th>Total Cobrado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-pagos">
+                        <tr><td colspan="7" style="text-align:center; padding:20px;">Cargando registros...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="js/pagos.js"></script>
+
+</body>
+</html>

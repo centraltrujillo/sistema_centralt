@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Registro de Recepcionistas | Hotel Central</title>
+  <link rel="icon" type="image/png" href="img/logo.png">
+  
+  <link rel="stylesheet" href="css/colors.css">
+  <link rel="stylesheet" href="css/registro.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=700&family=Lato:wght=300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="register-container">
+    <img src="img/logo.png" alt="Logo" class="logo-reg">
+    <h2>Registro de Recepcionistas</h2>
+
+    <form id="formRegistro">
+      
+      <div class="input-group">
+        <label for="reg-nombre">Nombre Completo del Personal</label>
+        <input id="reg-nombre" type="text" placeholder="Ej: María Fernanda Salinas" required />
+      </div>
+      
+      <div class="input-group">
+        <label for="reg-usuario">Nombre de Usuario (Corto)</label>
+        <input id="reg-usuario" type="text" placeholder="Ej: Fernanda" required />
+      </div>
+
+      <div class="input-group">
+        <label for="reg-email">Correo Electrónico Corporativo</label>
+        <input id="reg-email" type="email" placeholder="Ej: recepcionista1@hotelcentral.com" required />
+      </div>
+
+      <div class="input-group">
+        <label for="reg-password">Contraseña de Acceso</label>
+        <div class="password-container">
+          <input id="reg-password" type="password" placeholder="Mínimo 6 caracteres" required />
+          <span class="toggle-password" id="togglePassword">MOSTRAR</span>
+        </div>
+      </div>
+
+      <button id="btnSubmit" type="submit">REGISTRAR RECEPCIONISTA</button>
+      
+      <a href="dashboard.html" class="btn-volver">Volver al Panel</a>
+    </form>
+  </div>
+
+  <script type="module" src="js/config.js"></script>
+  <script type="module" src="js/registro.js"></script>
+</body>
+</html>

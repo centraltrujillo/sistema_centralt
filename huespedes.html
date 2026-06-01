@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Huéspedes | Hotel Central</title>
+    <link rel="icon" type="image/png" href="img/logo.png" />
+
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/dashboard.css">    
+    <link rel="stylesheet" href="css/huespedes.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="logo-box">
+                <div class="logo-icon">
+                    <img src="img/logo.jpeg" alt="Logo Hotel Central" style="width: 100%; height: auto; border-radius: 8px;">
+                </div>
+                <div>
+                    <h3>Hotel Central</h3>
+                    <p>Sistema de Gestión</p>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-link active"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+                <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+                <a href="huespedes.html" class="nav-link"><i class="fa-solid fa-users"></i> Huéspedes</a>
+                <a href="rack.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Ocupabilidad</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="page-header-container">
+                <div class="header-text">
+                    <h2>Gestión de Huéspedes</h2>
+                </div>
+                <div class="header-buttons">
+                    <button class="btn-export" onclick="exportarHuespedesExcel()" title="Descargar reporte en Excel">
+                        <i class="fa-solid fa-file-excel"></i> Exportar
+                    </button>
+                    <button class="btn-add" onclick="abrirModalNuevo()">
+                        <i class="fa-solid fa-plus"></i> Nuevo Huésped
+                    </button>
+                </div>
+            </header>
+
+            <div class="stats-container">
+                <div class="stat-card-main">
+                    <i class="fa-solid fa-user-check"></i>
+                    <div>
+                        <span>Total de Huéspedes Registrados</span>
+                        <h3 id="totalHuespedesHoy">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <section class="search-section">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="buscarHuesped" placeholder="Nombre o N° Documento...">
+                </div>
+            </section>
+
+            <div class="huespedes-grid" id="huespedesContainer"></div>
+
+            <div id="paginacionControls" class="paginacion-container"></div>
+        </main>
+    </div>
+
+    <div id="modalHuesped" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nuevo Huésped</h3>
+                <button class="close-btn" onclick="cerrarModal()" aria-label="Cerrar">&times;</button>
+            </div>
+            <form id="formHuesped">
+                <input type="hidden" id="huespedId"> 
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="resHuesped">Nombre y Apellidos</label>
+                        <input type="text" id="resHuesped" required placeholder="EJ. JUAN PÉREZ">
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoDocH">Tipo Documento</label>
+                        <select id="tipoDocH">
+                            <option value="DNI">DNI</option>
+                            <option value="Pasaporte">Pasaporte</option>
+                            <option value="CE">Carnet de Extranjería (CE)</option>
+                            <option value="RUC">RUC</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="resDoc">N° Documento</label>
+                        <input type="text" id="resDoc" required placeholder="Ej. 70654321">
+                    </div>
+                    <div class="form-group">
+                        <label for="resTelefono">Celular / Teléfono</label>
+                        <input type="tel" id="resTelefono" placeholder="Ej. 987654321">
+                    </div>
+                    <div class="form-group">
+                        <label for="resNacionalidad">Nacionalidad</label>
+                        <input type="text" id="resNacionalidad" value="Peruana" placeholder="Ej. Peruana">
+                    </div>
+                    <div class="form-group">
+                        <label for="resCiudad">Ciudad de Procedencia</label>
+                        <input type="text" id="resCiudad" placeholder="Ej. Lima">
+                    </div>
+                    <div class="form-group">
+                        <label for="resNacimiento">Fecha de Nacimiento</label>
+                        <input type="date" id="resNacimiento">
+                    </div>
+                    <div class="form-group">
+                        <label for="resCorreo">Correo Electrónico</label>
+                        <input type="email" id="resCorreo" placeholder="ejemplo@correo.com">
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="motivoH">Notas o Preferencias</label>
+                        <textarea id="motivoH" rows="2" placeholder="Ej. Alérgico, prefiere piso alto, habitación silenciosa..."></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar Huésped</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="js/huespedes.js"></script>
+</body>
+</html>

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso | Hotel Central</title>
+  <link rel="icon" type="image/png" href="img/logo.png" />
+
+  <link rel="stylesheet" href="css/colors.css">
+
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* 🌟 Reset y Estilos Base */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      height: 100vh;
+      background: var(--negro);
+      color: var(--blanco);
+      /* Fuente principal desde colors.css */
+      font-family: var(--font-main), sans-serif;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* 🚀 Animación de Entrada */
+    .page-container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      animation: slideInUp 1s cubic-bezier(0.7, 0, 0.3, 1) forwards;
+    }
+
+    @keyframes slideInUp {
+      0% { transform: translateY(100vh); }
+      100% { transform: translateY(0); }
+    }
+
+    /* 🖼️ Lado Izquierdo: Tu imagen F04.jpg */
+    .left-side {
+      flex: 1.2;
+      background: url('img/F04.jpg') no-repeat center center;
+      background-size: cover;
+      position: relative;
+    }
+
+    .left-side::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    /* 📋 Lado Derecho: Contenido */
+    .right-side {
+      flex: 0.8;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px;
+      /* Degradado elegante con tus colores vino y marrón */
+      background: linear-gradient(135deg, var(--vino-tinto), var(--marron-zocalo));
+      border-left: 1px solid var(--amarillo-ocre);
+      position: relative;
+    }
+
+    .right-side::before {
+      content: '';
+      position: absolute;
+      top: 40px; right: 40px;
+      width: 50px; height: 50px;
+      border-top: 2px solid var(--amarillo-ocre);
+      border-right: 2px solid var(--amarillo-ocre);
+      opacity: 0.6;
+    }
+
+    .brand-title {
+      /* Fuente de títulos desde colors.css */
+      font-family: var(--font-titles), serif;
+      font-size: 3.2rem;
+      color: var(--amarillo-ocre);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      text-align: center;
+      text-shadow: 2px 2px 15px rgba(0,0,0,0.5);
+    }
+
+    .brand-tagline {
+      /* Fuente principal desde colors.css */
+      font-family: var(--font-main), sans-serif;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      margin-bottom: 60px;
+      color: var(--blanco-colonial);
+      opacity: 0.8;
+      text-align: center;
+    }
+
+    /* 🔘 Botones Generales */
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .btn {
+      padding: 18px 30px;
+      /* Fuente principal desde colors.css */
+      font-family: var(--font-main), sans-serif;
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      border: 1px solid var(--amarillo-ocre);
+      background: transparent;
+      color: var(--amarillo-ocre);
+      cursor: pointer;
+      transition: all 0.4s ease;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .btn-login {
+      background: var(--amarillo-ocre);
+      color: var(--marron-zocalo); /* Texto oscuro para mejor contraste */
+    }
+
+    .btn-login:hover {
+      background: transparent;
+      color: var(--amarillo-ocre);
+      box-shadow: 0 0 20px rgba(212, 160, 23, 0.3);
+    }
+
+    .login-box {
+      width: 100%;
+      max-width: 320px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    /* Animaciones de transición */
+    .fade-out {
+      animation: fadeOut 0.4s forwards;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0; transform: scale(0.9); pointer-events: none; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Estilo para los inputs */
+    .input-group { margin-bottom: 15px; width: 100%; }
+    .input-group input {
+      width: 100%;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(212, 160, 23, 0.3);
+      color: white;
+      font-family: var(--font-main);
+      outline: none;
+      font-size: 0.85rem;
+    }
+    .input-group input:focus { 
+      border-color: var(--amarillo-ocre); 
+      background: rgba(255, 255, 255, 0.1); 
+    }
+
+    /* 🌟 NUEVO: Contenedor y Estilos de Botones de Turnos */
+    .label-turnos {
+      display: block;
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      color: var(--blanco-colonial);
+      opacity: 0.7;
+      text-transform: uppercase;
+    }
+
+    .turnos-container {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .btn-turno {
+      flex: 1;
+      padding: 12px 5px;
+      font-family: var(--font-main), sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(212, 160, 23, 0.3);
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-turno:hover {
+      border-color: var(--amarillo-ocre);
+      color: white;
+      background: rgba(212, 160, 23, 0.05);
+    }
+
+    /* Estado Activo cuando el recepcionista selecciona el turno */
+    .btn-turno.active {
+      background: var(--amarillo-ocre);
+      color: var(--marron-zocalo);
+      border-color: var(--amarillo-ocre);
+      box-shadow: 0 0 15px rgba(212, 160, 23, 0.4);
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="page-container">
+    
+    <div class="left-side"></div>
+
+    <div class="right-side">
+      <h1 class="brand-title">Hotel Central</h1>
+      <p class="brand-tagline">Tradición y confort en un solo lugar</p>
+
+      <div class="auth-wrapper" id="auth-wrapper">
+        
+        <div class="button-container" id="initial-actions">
+          <button class="btn btn-login">Iniciar Sesión</button>
+        </div>
+
+        <div class="login-box" id="login-section" style="display: none;">
+          <form id="login-form">
+            <div class="input-group">
+              <input type="email" id="email" placeholder="USUARIO / EMAIL" required>
+            </div>
+            
+            <div class="input-group">
+              <input type="password" id="password" placeholder="CONTRASEÑA" required>
+            </div>
+
+            <div class="input-group" style="margin-bottom: 5px;">
+              <span class="label-turnos">Seleccionar Turno</span>
+              <div class="turnos-container">
+                <button type="button" class="btn-turno" data-turno="Mañana">Mañana</button>
+                <button type="button" class="btn-turno" data-turno="Tarde">Tarde</button>
+                <button type="button" class="btn-turno" data-turno="Noche">Noche</button>
+              </div>
+              <input type="hidden" id="loginTurno" value="" required>
+            </div>
+
+            <button type="submit" class="btn btn-login" style="width: 100%;">ENTRAR AL SISTEMA</button>
+            <a href="#" style="color: var(--blanco-colonial); display:block; margin-top:15px; font-size:0.7rem; text-decoration:none; opacity:0.6;">← Volver</a>
+          </form>
+          <p id="error-msg" style="color: #ff4d4d; margin-top: 15px; font-size: 0.8rem; text-align: center;"></p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="js/config.js"></script>
+  <script type="module" src="js/index.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const botonesTurno = document.querySelectorAll('.btn-turno');
+      const inputOculto = document.getElementById('loginTurno');
+
+      botonesTurno.forEach(boton => {
+        boton.addEventListener('click', () => {
+          // Remover la clase activa de todos los botones
+          botonesTurno.forEach(btn => btn.classList.remove('active'));
+          
+          // Añadir clase activa al botón presionado
+          boton.classList.add('active');
+          
+          // Asignar el valor correspondiente al input oculto
+          inputOculto.value = boton.getAttribute('data-turno');
+        });
+      });
+    });
+  </script>
+
+</body>
+</html>

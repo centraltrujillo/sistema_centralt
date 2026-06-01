@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Hotel Central</title>
+    
+    <link rel="icon" type="image/png" href="img/logo.png" />
+
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="logo-box">
+                <div class="logo-icon">
+                    <img src="img/logo.jpeg" alt="Logo Hotel Central" style="width: 100%; height: auto; border-radius: 8px;">
+                </div>
+                <div>
+                    <h3>Hotel Central</h3>
+                    <p>Sistema de Gestión</p>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-link active"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                <a href="habitaciones.html" class="nav-link"><i class="fa-solid fa-bed"></i> Habitaciones</a>
+                <a href="reservas.html" class="nav-link"><i class="fa-solid fa-calendar-check"></i> Reservas</a>
+                <a href="huespedes.html" class="nav-link"><i class="fa-solid fa-users"></i> Huéspedes</a>
+                <a href="rack.html" class="nav-link"><i class="fa-solid fa-hotel"></i> Ocupabilidad</a>
+                <a href="eventos.html" class="nav-link"><i class="fa-solid fa-calendar-days"></i> Eventos</a>
+                <a href="reporte.html" class="nav-link"><i class="fa-solid fa-receipt"></i> Reporte Diario</a>
+                <a href="registro.html" class="nav-link"><i class="fa-solid fa-receipt"></i> Registro</a>
+
+
+                </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h2 id="view-title">Panel de Control</h2>
+                    <p id="current-date" style="font-size: 0.85rem; color: #64748b; margin: 0;"></p>
+                </div>
+                
+                <div class="user-info">
+                    <div class="text-right">
+                        <span id="userName" style="font-weight: 700; color: var(--vino-tinto);">Cargando...</span>
+                        <br>
+                        <small id="userRole" style="color: var(--marron-zocalo);">Verificando rol...</small>
+                    </div>
+                    <button id="btnLogout" title="Cerrar Sesión">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </header>
+
+            <section class="kpi-grid">
+                <div class="kpi-card animated-fade">
+                    <div class="kpi-info">
+                        <span class="kpi-label">Ingresos Mensuales</span>
+                        <h2 id="kpi-ingresos" class="kpi-number">S/ 0.00</h2>
+                        <small id="trend-ingresos" class="trend-value">--% vs mes anterior</small>
+                    </div>
+                    <div class="kpi-icon gold"><i class="fa-solid fa-money-bill-trend-up"></i></div>
+                </div>
+            
+                <div class="kpi-card animated-fade" style="animation-delay: 0.1s;">
+                    <div class="kpi-info">
+                        <span class="kpi-label">Huéspedes Actuales</span>
+                        <h2 id="kpi-huespedes" class="kpi-number">0</h2>
+                        <small id="trend-huespedes" class="trend-value">--% vs mes anterior</small>
+                    </div>
+                    <div class="kpi-icon blue"><i class="fa-solid fa-users"></i></div>
+                </div>
+            
+                <div class="kpi-card animated-fade" style="animation-delay: 0.2s;">
+                    <div class="kpi-info">
+                        <span class="kpi-label">Ocupación Real</span>
+                        <h2 id="kpi-ocupacion" class="kpi-number">0/13</h2>
+                        <small id="trend-ocupacion" class="trend-value">--% vs mes anterior</small>
+                    </div>
+                    <div class="kpi-icon green"><i class="fa-solid fa-door-open"></i></div>
+                </div>
+            
+                <div class="kpi-card animated-fade" style="animation-delay: 0.3s;">
+                    <div class="kpi-info">
+                        <span class="kpi-label">Reservas Hoy</span>
+                        <h2 id="kpi-reservas-hoy" class="kpi-number">0</h2>
+                        <small id="trend-reservas" class="trend-value">--% vs ayer</small>
+                    </div>
+                    <div class="kpi-icon purple"><i class="fa-solid fa-calendar-check"></i></div>
+                </div>
+            </section>
+
+            <section class="charts-grid-double" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <article class="card animated-fade">
+                    <h3><i class="fa-solid fa-chart-line"></i> Ingresos Semanales</h3>
+                    <div id="chart-line"></div>
+                </article>
+
+                <article class="card animated-fade" style="animation-delay: 0.1s;">
+                    <h3><i class="fa-solid fa-chart-bar"></i> Comparativa Mensual</h3>
+                    <div id="chart-bar"></div> 
+                </article>
+            </section>
+
+            <section class="activity-section card animated-fade" style="margin-top: 25px;">
+                <h3><i class="fa-solid fa-receipt"></i> Últimos Pagos Registrados</h3>
+                <div id="list-checkins" class="checkins-list">
+                    <p style="text-align: center; color: #888; padding: 20px;">Sincronizando cobros...</p>
+                </div>
+                <div style="text-align: right; margin-top: 15px;">
+                    <a href="pagos.html" class="btn-view-all">Ver historial de pagos →</a>
+                </div>
+            </section>
+        </main>
+    </div>
+      <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+      <script type="module" src="js/config.js"></script>
+      <script type="module" src="js/dashboard.js"></script>
+    
+    <script>
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('es-ES', dateOptions);
+    </script>
+</body>
+</html>

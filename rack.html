@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rack | Hotel Central</title>
+    <link rel="icon" type="image/png" href="img/logo.png" />
+
+    <link rel="stylesheet" href="css/colors.css">
+    <link rel="stylesheet" href="css/rack.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.css" rel="stylesheet" />
+</head>
+<body>
+
+    <main class="main-content">
+        <header class="header-flex">
+            <div class="header-left">
+                <a href="dashboard.html" class="btn-back" title="Volver al Dashboard">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <div class="title-container">
+                    <h2 class="main-title">Habitaciones HOTEL CENTRAL</h2>
+                    <p id="current-date" class="date-text"></p>
+                </div>
+            </div>
+            
+            <nav class="header-actions">
+                <a href="reservas.html" class="btn-header" style="text-decoration: none;">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Ver Reservas</span>
+                </a>
+
+                <a href="habitaciones.html" class="btn-header">
+                    <i class="fa-solid fa-bed"></i>
+                    <span>Ver habitaciones</span>
+                </a>
+            </nav>
+        </header> 
+        
+        <section class="legend-container">
+            <div class="legend-item"><span class="dot presencial"></span> Presencial</div>
+            <div class="legend-item"><span class="dot llamada"></span> Llamada</div>
+            <div class="legend-item"><span class="dot whatsapp"></span> WhatsApp</div>
+            <div class="legend-item"><span class="dot booking"></span> Booking</div>
+            <div class="legend-item"><span class="dot airbnb"></span> Airbnb</div>
+            <div class="legend-item"><span class="dot expedia"></span> Expedia</div>
+            <div class="legend-item"><span class="dot dayuse"></span> Day Use</div>
+            <div class="legend-item"><span class="dot gmail"></span> Gmail</div>
+            <div class="legend-item"><span class="dot otro"></span> Otro</div>
+        </section>
+
+        <section class="gantt-wrapper">
+            <div id="gantt_here" style="width:100%; height:500px;"></div>
+        </section>
+    </main>
+
+   <div id="modalReserva" class="modal-reserva-overlay">
+    <div class="modal-reserva-content">
+        <div class="modal-reserva-header">
+            <h3 id="modalTitle">Nueva Reserva</h3>
+            <span class="close-modal" onclick="cerrarModal()">&times;</span>
+        </div>
+
+        <form id="formNuevaReserva" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
+            
+            <div class="form-body-no-scroll">
+                
+                <div class="form-section-title">DATOS DEL HUÉSPED</div>
+                <div class="form-grid-compact">
+                    <input type="hidden" id="resHuespedId">
+
+                    <div class="form-group span-2">
+                        <label>Nombres y Apellidos</label>
+                        <input type="text" id="resHuesped" required placeholder="Nombre completo">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo Doc.</label>
+                        <select id="resTipoDoc" required>
+                            <option value="DNI">DNI</option>
+                            <option value="Pasaporte">Pasaporte</option>
+                            <option value="CE">C.E.</option>
+                            <option value="RUC">RUC</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nro. Documento</label>
+                        <input type="text" id="resDoc" required placeholder="Ej: 74589632">
+                    </div>
+                    <div class="form-group">
+                        <label>Telefono</label>
+                        <input type="tel" id="resTelefono" required placeholder="999 999 999">
+                    </div>
+                    <div class="form-group">
+                        <label>Nacionalidad</label>
+                        <input type="text" id="resNacionalidad" value="Peruana">
+                    </div>
+                    <div class="form-group">
+                        <label>Ciudad</label>
+                        <input type="text" id="resCiudad" placeholder="Lima">
+                    </div>
+                    <div class="form-group">
+                        <label>Nacimiento</label>
+                        <input type="date" id="resNacimiento">
+                    </div>
+                    <div class="form-group span-2">
+                        <label>Correo Electrónico</label>
+                        <input type="email" id="resCorreo" placeholder="correo@ejemplo.com">
+                    </div>
+                    <div class="form-group span-2">
+                        <label>Preferencias</label>
+                        <input type="text" id="resPreferencia" placeholder="habitación favorita, allergies, etc.">
+                    </div>
+                </div>
+
+                <div class="form-section-title">DETALLES DE LA ESTANCIA</div>
+                <div class="form-grid-compact">
+                    <div class="form-group">
+                        <label>Habitación</label>
+                        <select id="resHabitacion" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Check In</label>
+                        <input type="date" id="resCheckIn" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Check Out</label>
+                        <input type="date" id="resCheckOut" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Medio Reserva</label>
+                        <select id="resMedio" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="Presencial">Presencial (Personal)</option>
+                            <option value="WhatsApp">WhatsApp</option>
+                            <option value="Teléfono">Teléfono / Llamada</option>
+                            <option value="Booking">Booking</option>
+                            <option value="Airbnb">Airbnb</option>
+                            <option value="Expedia">Expedia</option>
+                            <option value="Gmail">Gmail</option>
+                            <option value="Day use">Day use</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                    </div>
+
+                    <div id="statusDisponibilidad" class="status-badge span-3"></div>
+
+                    <div class="form-group">
+                        <label>N° Personas</label>
+                        <input type="number" id="resNumPersonas" min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Desayuno</label>
+                        <select id="resInfo">
+                            <option value="true">CON DESAYUNO</option>
+                            <option value="false">SIN DESAYUNO</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Ingreso</label>
+                        <input type="time" id="resEarlyHora">
+                    </div>
+                    <div class="form-group">
+                        <label>Hora Salida</label>
+                        <input type="time" id="resLateHora">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cochera</label>
+                        <select id="resCochera">
+                            <option value="No">No requiere</option>
+                            <option value="Red Parking">Red Parking</option>
+                            <option value="Santa Mónica">Santa Mónica</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px;">
+                        <label for="resAplicaEarly" style="margin: 0; cursor: pointer; font-weight: bold; font-size: 12px;">¿Aplica Early Check-In?</label>
+                        <input type="checkbox" id="resAplicaEarly" style="width: 20px; height: 20px; cursor: pointer;">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px;">
+                        <label for="resAplicaLate" style="margin: 0; cursor: pointer; font-weight: bold; font-size: 12px;">¿Aplica Late Check-Out?</label>
+                        <input type="checkbox" id="resAplicaLate" style="width: 20px; height: 20px; cursor: pointer;">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estado Reserva</label>
+                        <select id="resEstado" required>
+                            <option value="Confirmada">Confirmada</option>
+                            <option value="En Curso">En Curso (Check-In)</option>
+                            <option value="Finalizada">Finalizada (Check-Out)</option>
+                            <option value="Cancelada">Cancelada</option>
+                            <option value="No Show">No Show</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group span-4">
+                        <label>Traslado Logístico</label>
+                        <input type="text" id="resTraslado" placeholder="Detalles del vuelo o transporte">
+                    </div>
+                </div>
+
+                <div class="form-section-title">TARIFA DE LA RESERVA</div>
+                <div class="form-grid-compact highlight-section">
+                    <div class="form-group">
+                        <label>Tarifa por Noche</label>
+                        <input type="number" id="resTarifa" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Moneda</label>
+                        <select id="resMoneda">
+                            <option value="PEN">Soles (S/)</option>
+                            <option value="USD">Dólares ($)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>T. Cambio</label>
+                        <input type="number" id="resTipoCambio" step="0.001" placeholder="3.50">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Estancia</label>
+                        <input type="number" id="resTotal" class="input-total" step="0.01" readonly value="0.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Adelanto (Abono)</label>
+                        <input type="number" id="resAdelantoMonto" class="input-adelanto" step="0.01" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Método de Pago</label>
+                        <select id="resMetodoPago">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Yape">Yape</option>
+                            <option value="Transferencia">Transferencia Bancaria</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Monto Pendiente</label>
+                        <input type="number" id="resDiferencia" class="input-diferencia" step="0.01" readonly value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Nro. Operación / Nota</label>
+                        <input type="text" id="resAdelantoDetalle" placeholder="Ej: Yape 154823">
+                    </div>
+                </div>
+
+                <div class="form-grid-compact" style="margin-top: 10px;">
+                    <div class="form-group span-2">
+                        <label>Observaciones</label>
+                        <input type="text" id="resObservaciones">
+                    </div>
+                    <div class="form-group">
+                        <label>Recibido por</label>
+                        <input type="text" id="resRecepcion">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmado por</label>
+                        <input type="text" id="resRecepcionconfi">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions-res">
+                <button type="button" class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn-save">Guardar Reserva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modalVistaReserva" class="modal-pms-overlay">
+    <div class="modal-pms-card animate-fadeIn">
+        
+        <div class="modal-pms-header">
+            <div class="header-title-wrapper" style="display: flex; align-items: center; gap: 12px;">
+                <i class="fa-solid fa-receipt header-icon"></i>
+                <div style="display: flex; align-items: right; gap: 10px; flex-wrap: wrap;">
+                    <h3 id="viewModalTitle" style="margin: 0;">Detalle de la Reserva</h3>
+                    <span id="viewResEstado" class="badge-estado"></span>
+                </div>
+            </div>
+            <span class="close-modal" onclick="window.cerrarModalVista()">&times;</span>
+        </div>
+
+        <div class="modal-pms-body">
+            
+            <div class="modal-col-left">
+                
+                <div class="section-card">
+                    <h4><i class="fa-solid fa-user"></i> Información del Huésped</h4>
+                    <div class="info-grid">
+                        <div class="full-width"><label>Nombre:</label> <span id="viewHuespedNombre" class="highlight-text">---</span></div>
+                        <div><label>Documento:</label> <span id="viewHuespedDoc">---</span></div>
+                        <div><label>Teléfono:</label> <span id="viewHuespedTel">---</span></div>
+                        <div class="full-width"><label>Correo:</label> <span id="viewHuespedCorreo" class="text-lowercase">---</span></div>
+                        <div><label>Nacionalidad:</label> <span id="viewHuespedNacio">---</span></div>
+                        <div><label>Ciudad de Proc.:</label> <span id="viewHuespedCiudad">---</span></div>
+                        <div class="full-width"><label>F. Nacimiento:</label> <span id="viewHuespedNacimiento">---</span></div>
+                        <div class="full-width"><label>Preferencias:</label> <span id="viewHuespedPref" class="text-italic-gray">---</span></div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <h4><i class="fa-solid fa-calendar-days"></i> Detalles de la Estancia</h4>
+                    <div class="info-grid">
+                        <div><label>Habitación:</label> <span id="viewResHabitacion" class="room-badge">---</span></div>
+                        <div><label>Medio Reserva:</label> <span id="viewResMedio" class="media-badge">---</span></div>
+                        <div><label>Check-In:</label> <span id="viewResCheckIn" class="date-badge text-emerald">---</span></div>
+                        <div><label>Check-Out:</label> <span id="viewResCheckOut" class="date-badge text-wine">---</span></div>
+                        <div><label>Hora Early C-In:</label> <span id="viewResHoraEarly">---</span></div>
+                        <div><label>Hora Late C-Out:</label> <span id="viewResHoraLate">---</span></div>
+                        <div><label>Noches:</label> <span id="viewResNoches" class="numeric-focus">0</span></div>
+                        <div><label>Nro. Personas:</label> <span id="viewResPersonas">1</span></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-col-right">
+                
+                <div class="section-card">
+                    <h4><i class="fa-solid fa-bell"></i> Servicios Adicionales & Observaciones</h4>
+                    <div class="services-flex">
+                        <div><i class="fa-solid fa-coffee"></i> ¿Desayuno?: <span id="viewResDesayuno" class="bool-text">No</span></div>
+                        <div><i class="fa-solid fa-car"></i> Cochera: <span id="viewResCochera" class="bool-text">No</span></div>
+                        <div><i class="fa-solid fa-plane-departure"></i> Traslado: <span id="viewResTraslado" class="bool-text">No</span></div>
+                    </div>
+                    <div class="notes-container">
+                        <label><i class="fa-solid fa-quote-left"></i> Observaciones/Notas</label>
+                        <p id="viewResNotas">Sin observaciones adicionales.</p>
+                    </div>
+                </div>
+
+                <div class="section-card financial-summary">
+                    <h4><i class="fa-solid fa-hand-holding-dollar"></i> Liquidación de Caja</h4>
+                    <div class="financial-row">
+                        <span class="fin-label">Tarifa Hospedaje (por noche):</span>
+                        <span id="viewResTarifa" class="fin-val">---</span>
+                    </div>
+                    <div class="financial-row">
+                        <span class="fin-label">Cargos Adicionales (Early / Late):</span>
+                        <span id="viewResCargosExtras" class="fin-val text-muted">---</span>
+                    </div>
+                    <div class="financial-row">
+                        <span class="fin-label text-muted">Tipo de Cambio Aplicado:</span>
+                        <span id="viewResTipoCambio" class="fin-mono">---</span>
+                    </div>
+                    <div class="financial-row payment-highlight">
+                        <span class="fin-label text-emerald-dark"><i class="fa-solid fa-circle-check"></i> Adelanto Recibido (<span id="viewResMetodoText">---</span>):</span>
+                        <div class="payment-val-block">
+                            <span id="viewResAdelanto" class="text-emerald-dark font-bold">---</span>
+                            <span id="viewBlockOperacion" class="operation-tag hidden">Detalle: <span id="viewResNroOperacion">---</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="financial-total-row">
+                        <span>Total Neto de Estadía:</span>
+                        <span id="viewResTotal">---</span>
+                    </div>
+
+                    <div class="audit-footer">
+                        <span><i class="fa-solid fa-user-shield"></i> Registrado por: <strong id="viewAuditRecepcionista">---</strong></span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div> 
+
+        <div class="modal-pms-footer">
+            <button type="button" class="btn-pms-close" onclick="window.cerrarModalVista()">
+                <i class="fa-solid fa-xmark"></i> Cerrar Ventana
+            </button>
+            <button type="button" id="btnIrAEditar" class="btn-pms-edit">
+                <i class="fa-solid fa-pen-to-square"></i> Editar Datos de Reserva
+            </button>
+        </div>
+    </div>
+</div>
+
+        </div> </div> <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js"></script>
+
+    <script src="js/config.js" type="module"></script>
+    <script src="js/auth-check.js"></script> 
+    <script type="module" src="js/rack.js"></script>
+    
+</body>
+</html>
