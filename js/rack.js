@@ -400,7 +400,6 @@ if (horaPeru >= 7 && horaPeru < 14) {
                     fecha_nacimiento: txtNacimiento?.value || null, 
                     ciudad: txtCiudad?.value.trim().toUpperCase() || null,
                     preferencias: txtPreferencia?.value.trim() || null,
-                    fecha_registro: fechaCalculada // 💡 Vinculamos la creación del huésped a la fecha operativa
                 };
             } else {
                 if (typeof Swal !== 'undefined') {
