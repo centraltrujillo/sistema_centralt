@@ -1,0 +1,312 @@
+/* --- dashboard.css | Hotel Central (Versión Optimizada) --- 
+
+📏 Estándar de Tipografía (General)
+Base (body): 15px (Lato).
+
+Títulos Principales (h2, logo h3): 20px (Playfair Display).
+
+Números KPI (h2 en tarjetas): 25px (Playfair Display).
+
+Enlaces de Navegación (nav-link): 14px.
+
+Títulos de Tarjetas (h3): 16px.
+
+Etiquetas y Detalles: 11px - 12px.
+
+🎨 Paleta y Comportamiento
+Sidebar: 200px de ancho con fondo blanco y sombra sutil.
+
+Identidad: Uso predominante de Vino Tinto para elementos activos y acentos.
+
+/* --- dashboard.css | Hotel Central (Versión Final Blindada) --- */
+
+/* --- 1. VARIABLES Y RESET --- */
+:root {
+    --vino-tinto: #800020;
+    --amarillo-ocre: #cc9900;
+    --marron-zocalo: #3d2b1f;
+    --gris-suave: #f8fafc;
+    --font-titles: 'Playfair Display', serif;
+    --font-body: 'Lato', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 15px;
+    background-color: #f4f7f6;
+    color: var(--marron-zocalo);
+}
+
+/* --- 2. ESTRUCTURA PRINCIPAL (SIDEBAR Y CONTENIDO) --- */
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+    padding: 20px;
+    position: fixed;
+    height: 100vh;
+    z-index: 100;
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 250px; /* Espacio para la sidebar */
+    padding: 30px;
+}
+
+/* Logo en Sidebar */
+.logo-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 40px;
+}
+
+.logo-box h3 {
+    font-family: var(--font-titles);
+    font-size: 20px;
+    color: var(--vino-tinto);
+}
+
+/* Menú de Navegación */
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: #64748b;
+    padding: 12px 15px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.nav-link:hover, .nav-link.active {
+    background: var(--vino-tinto);
+    color: white;
+}
+
+/* --- 3. CABECERA --- */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid #eee;
+}
+
+.header-title h2 {
+    font-family: var(--font-titles);
+    font-size: 24px;
+}
+
+/* --- Ajustes para la Info del Usuario --- */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Espacio entre el texto y el botón de logout */
+}
+
+.text-right {
+    text-align: right;
+    line-height: 1.2; /* Mantiene el nombre y rol juntos */
+}
+
+#userName {
+    font-size: 15px; /* Tu estándar de tamaño base profesional */
+}
+
+#userRole {
+    font-size: 14px; /* Tu estándar para enlaces y navegación */
+    font-weight: 400; /* Un poco más delgado que el nombre para jerarquía */
+}
+
+#btnLogout {
+    background: var(--vino-tinto);
+    color: white;
+    border: none;
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+#btnLogout:hover { background: #a00028; transform: scale(1.05); }
+
+/* --- 4. GRIDS Y TARJETAS KPI --- */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.kpi-card {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    transition: 0.3s;
+    border-bottom: 4px solid #eee;
+}
+
+.kpi-card:hover { transform: translateY(-5px); border-bottom-color: var(--amarillo-ocre); }
+
+.kpi-info h2 {
+    font-size: 25px; /* Según tu estándar */
+    margin: 5px 0;
+    font-family: var(--font-titles);
+}
+
+.kpi-icon {
+    width: 55px; height: 55px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+}
+.kpi-icon.blue { background: #e0f2fe; color: #0369a1; }
+.kpi-icon.green { background: #dcfce7; color: #166534; }
+.kpi-icon.purple { background: #f3e8ff; color: #7e22ce; }
+.kpi-icon.gold {background: #fef3c7; color: var(--amarillo-ocre);}
+
+/* --- 4.1. ESTADOS DE TENDENCIA (AUTOMÁTICOS) --- */
+.trend-value {
+    font-size: 11px; /* Según tu estándar para detalles */
+    font-weight: 700;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Verde para subidas positivas (Ingresos, Huéspedes) */
+.trend-positive {
+    color: #10b981; 
+}
+.trend-positive::before {
+    content: "\f062"; /* Icono arrow-up de FontAwesome */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+}
+
+/* Rojo para bajadas (o según la lógica del negocio) */
+.trend-negative {
+    color: #ef4444;
+}
+.trend-negative::before {
+    content: "\f063"; /* Icono arrow-down de FontAwesome */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+}
+
+/* Gris para cuando no hay cambio o datos previos */
+.trend-neutral {
+    color: #64748b;
+}
+
+@keyframes pulse-data {
+    0% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.kpi-number.loading {
+    animation: pulse-data 1s infinite alternate;
+    color: #cbd5e1;
+}
+
+/* --- 5. GRÁFICOS --- */
+.charts-grid-triple {
+    display: grid;
+    /* Cambiamos de 1.5fr 1fr 1fr a una distribución más equilibrada para barras */
+    grid-template-columns: 1.2fr 0.8fr 1fr; 
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.card h3 {
+    font-family: var(--font-titles);
+    font-size: 16px; /* Según tu estándar */
+    color: var(--marron-zocalo);
+    margin-bottom: 20px;
+}
+
+/* --- 6. ACTIVIDAD RECIENTE (CRM) --- */
+/* Mejora para la info de actividad */
+.activity-info p {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--marron-zocalo);
+}
+
+.activity-info small {
+    color: #64748b;
+}
+
+.activity-info strong {
+    color: #166534; /* Verde para el monto S/ */
+    font-family: var(--font-titles);
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--gris-suave);
+    margin-bottom: 10px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+.activity-item:hover {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transform: translateX(5px);
+    transition: 0.3s;
+}
+
+.activity-badge {
+    width: 10px; height: 10px;
+    background: var(--amarillo-ocre);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--amarillo-ocre);
+}
+
+/* --- 7. RESPONSIVIDAD --- */
+@media (max-width: 1200px) {
+    .charts-grid-triple { grid-template-columns: 1fr; }
+    .sidebar { width: 80px; }
+    .sidebar h3, .sidebar p { display: none; }
+    .main-content { margin-left: 80px; }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
