@@ -317,7 +317,7 @@
 .form-group label {
     font-size: 10px !important;
     font-weight: 700;
-    color: var(--marron-zocalo);
+    color: var(--negro);
     text-transform: uppercase;
     margin-bottom: 2px;
 }

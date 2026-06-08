@@ -18,13 +18,17 @@ const inputTotal = document.getElementById("resTotal");
 const inputAdelantoMonto = document.getElementById("resAdelantoMonto");
 const inputDiferencia = document.getElementById("resDiferencia");
 const selectMoneda = document.getElementById("resMoneda");
-const inputTipoCambio = document.getElementById("resTipoCambio");
+const inputTipoCambio = document.getElementById("inputTipoCambio"); // Mapeado correctamente
 
-// NUEVAS REFERENCIAS: Checkboxes financieros y Pasarela de pagos
+// Checkboxes financieros y Pasarela de pagos
 const checkEarly = document.getElementById("resAplicaEarly");
 const checkLate = document.getElementById("resAplicaLate");
 const selectMetodoPago = document.getElementById("resMetodoPago");
 const inputAdelantoDetalle = document.getElementById("resAdelantoDetalle");
+
+// NUEVAS REFERENCIAS: Sección Niños
+const checkAplicaNinos = document.getElementById("resAplicaNinos");
+const inputInformacionNinos = document.getElementById("resInformacionNinos");
 
 
 // --- ASIGNACIÓN DE LISTENERS SEGUROS (Vía AddEventListener) ---
@@ -39,13 +43,14 @@ if (btnAbrirModal) {
         // Inicializaciones financieras base
         if (inputTotal) inputTotal.value = "0.00";
         if (inputDiferencia) inputDiferencia.value = "0.00";
-        if (inputTipoCambio) inputTipoCambio.value = "1.000"; // Tu valor por defecto en SQL
+        if (inputTipoCambio) inputTipoCambio.value = "1.000"; 
         
         // Aseguramos que los checkboxes inicien limpios
         if (checkEarly) checkEarly.checked = false;
         if (checkLate) checkLate.checked = false;
+        if (checkAplicaNinos) checkAplicaNinos.checked = false;
         
-        // Limpieza absoluta de los metadatos guardados en el formulario
+        // Limpieza de metadatos guardados en el formulario
         if (form) {
             delete form.dataset.idHuesped;
             delete form.dataset.cargoEarly;
@@ -56,22 +61,18 @@ if (btnAbrirModal) {
     });
 }
 
-// Evento para cerrar desde la 'X' usando el espacio de nombres global seguro
+// Cierre desde la 'X' o clics externos
 if (closeModal) {
-    closeModal.addEventListener("click", () => {
-        window.cerrarModal();
-    });
+    closeModal.addEventListener("click", () => window.cerrarModal());
 }
 
 if (modal) {
     modal.addEventListener("click", (e) => {
-        if (e.target === modal) {
-            window.cerrarModal();
-        }
+        if (e.target === modal) window.cerrarModal();
     });
 }
 
-// --- HACER LAS FUNCIONES VISIBLES PARA EL HTML (Módulos ES6) ---
+// --- HACER LAS FUNCIONES VISIBLES PARA EL HTML ---
 window.cerrarModal = () => { 
     if (modal) modal.classList.remove("active"); 
     if (form) form.reset(); 
@@ -100,14 +101,9 @@ const cargarHabitacionesSelect = async () => {
 
         if (error) throw error;
 
-        console.log("Habitaciones recibidas de Supabase:", habitaciones);
-
         selectHabitacion.innerHTML = '<option value="">Seleccionar...</option>';
         
-        if (!habitaciones || habitaciones.length === 0) {
-            console.warn("Alerta: La tabla 'habitaciones' devolvió cero registros. Revisa políticas RLS.");
-            return;
-        }
+        if (!habitaciones || habitaciones.length === 0) return;
 
         habitaciones.forEach(hab => {
             const option = document.createElement("option");
@@ -118,85 +114,54 @@ const cargarHabitacionesSelect = async () => {
         });
 
     } catch (error) {
-        console.error("Error crítico al cargar selector de habitaciones:", error.message || error);
+        console.error("Error al cargar selector de habitaciones:", error.message || error);
     }
 };
 
-// --- AUTO-RELLENAR TARIFA AL SELECCIONAR HABITACIÓN ---
 if (selectHabitacion) {
     selectHabitacion.addEventListener("change", (e) => {
         const optionSeleccionada = e.target.options[e.target.selectedIndex];
-        
         if (!optionSeleccionada) return;
-        const precioBase = optionSeleccionada.dataset.precio;
         
+        const precioBase = optionSeleccionada.dataset.precio;
         if (precioBase && inputTarifa) {
             inputTarifa.value = parseFloat(precioBase).toFixed(2);
-            
-            // Disparamos el cálculo de montos automático si la función ya existe abajo
-            if (typeof window.calcularMontos === 'function') {
-                window.calcularMontos();
-            }
+            window.calcularMontos();
         }
     });
 }
 cargarHabitacionesSelect();
-// =========================================================================
-// 🔥 ¡AQUÍ SE AGREGAN LOS DISPARADORES AUTOMÁTICOS!
-// =========================================================================
-if (inputTarifa) {
-    inputTarifa.addEventListener("input", () => window.calcularMontos());
-}
-if (inputCheckIn) {
-    inputCheckIn.addEventListener("change", () => window.calcularMontos());
-}
-if (inputCheckOut) {
-    inputCheckOut.addEventListener("change", () => window.calcularMontos());
-}
-if (inputAdelantoMonto) {
-    inputAdelantoMonto.addEventListener("input", () => window.calcularMontos());
-}
-if (selectMoneda) {
-    selectMoneda.addEventListener("change", () => window.calcularMontos());
-}
-if (inputTipoCambio) {
-    inputTipoCambio.addEventListener("input", () => window.calcularMontos());
-}
-// También para los checkboxes si deseas que sumen el 50% de inmediato al marcarlos:
-if (checkEarly) {
-    checkEarly.addEventListener("change", () => window.calcularMontos());
-}
-if (checkLate) {
-    checkLate.addEventListener("change", () => window.calcularMontos());
-}
 
-// --- 2. LÓGICA DE CÁLCULOS (Conversión Booking USD a Soles y Saldos) ---
+// --- DISPARADORES AUTOMÁTICOS ---
+if (inputTarifa) inputTarifa.addEventListener("input", () => window.calcularMontos());
+if (inputCheckIn) inputCheckIn.addEventListener("change", () => window.calcularMontos());
+if (inputCheckOut) inputCheckOut.addEventListener("change", () => window.calcularMontos());
+if (inputAdelantoMonto) inputAdelantoMonto.addEventListener("input", () => window.calcularMontos());
+if (selectMoneda) selectMoneda.addEventListener("change", () => window.calcularMontos());
+if (inputTipoCambio) inputTipoCambio.addEventListener("input", () => window.calcularMontos());
+if (checkEarly) checkEarly.addEventListener("change", () => window.calcularMontos());
+if (checkLate) checkLate.addEventListener("change", () => window.calcularMontos());
+
+
+// --- 2. LÓGICA DE CÁLCULOS (Modificada para Redondeo Inteligente) ---
 window.calcularMontos = () => {
     if (!inputCheckIn || !inputCheckOut || !inputTarifa || !inputTotal || !inputDiferencia || !inputAdelantoMonto) return;
 
-    // 1. Captura de datos básicos y fechas
     const fIn = new Date(inputCheckIn.value + 'T00:00:00');
     const fOut = new Date(inputCheckOut.value + 'T00:00:00');
     const tarifaBase = parseFloat(inputTarifa.value) || 0;
-    
-    // Captura el tipo de cambio (si no hay, usa 3.75 por seguridad para evitar multiplicar por 0 o NaN)
     const tc = parseFloat(inputTipoCambio?.value) || 3.75; 
     const moneda = selectMoneda?.value || 'PEN';
 
-    // Captura de Checkboxes de recargos
-    const checkEarly = document.getElementById("resAplicaEarly");
-    const checkLate = document.getElementById("resAplicaLate");
     const tieneEarly = checkEarly ? checkEarly.checked : false;
     const tieneLate = checkLate ? checkLate.checked : false;
 
-    // Validación de fechas vacías
     if (!inputCheckIn.value || !inputCheckOut.value) {
         inputTotal.value = "0.00";
         inputDiferencia.value = "0.00";
         return;
     }
 
-    // 2. Cálculo de Noches
     const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
 
     if (noches < 0 || (noches === 0 && !tieneEarly && !tieneLate)) {
@@ -205,37 +170,30 @@ window.calcularMontos = () => {
         return;
     }
     
-    // 3. Subtotal de Hospedaje en la moneda original de la tarifa (USD de Booking o PEN)
     let subtotalHospedaje = (noches === 0) ? tarifaBase : (noches * tarifaBase);
-
-    // 4. Calcular cargos de penalidades en la moneda original
     let cargoEarly = tieneEarly ? (tarifaBase * 0.5) : 0.00;
     let cargoLate = tieneLate ? (tarifaBase * 0.5) : 0.00;
 
-    // Total acumulado en la moneda de origen
     let totalMonedaOriginal = subtotalHospedaje + cargoEarly + cargoLate;
 
-    // Guardamos los cargos calculados en los datasets del formulario por si los requiere el backend
     if (form) {
         form.dataset.cargoEarly = cargoEarly;
         form.dataset.cargoLate = cargoLate;
     }
 
-    // 🔥 5. AQUÍ SE HACE LA MAGIA PARA BOOKING (Conversión a Soles)
     let totalFinalMostrado = totalMonedaOriginal;
     
+    // 🔥 CAMBIO CRÍTICO: Redondeo entero si la tarifa es USD (Booking, Airbnb) convertido a Soles
     if (moneda === "USD") {
-        // Si la tarifa viene de Booking en dólares, la pasamos a Soles multiplicando por el Tipo de Cambio
-        totalFinalMostrado = totalMonedaOriginal * tc;
+        totalFinalMostrado = Math.round(totalMonedaOriginal * tc);
+    } else {
+        totalFinalMostrado = parseFloat(totalFinalMostrado.toFixed(2));
     }
 
-    // Pintamos el total transformado en Soles directamente en el campo de la pantalla
     inputTotal.value = totalFinalMostrado.toFixed(2);
 
-    // 6. Restar el Adelanto (en Soles) y calcular el Pendiente Real (en Soles)
     let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
 
-    // Validación para impedir que el recepcionista digite un adelanto mayor al total convertido
     if (adelanto > totalFinalMostrado && totalFinalMostrado > 0) {
         adelanto = totalFinalMostrado;
         inputAdelantoMonto.value = totalFinalMostrado.toFixed(2);
@@ -248,7 +206,6 @@ window.calcularMontos = () => {
         }
     }
 
-    // Restamos y mostramos el pendiente exacto (Total Soles - Adelanto Soles)
     inputDiferencia.value = (totalFinalMostrado - adelanto).toFixed(2);
 };
 
@@ -260,9 +217,7 @@ const Toast = typeof Swal !== 'undefined' ? Swal.mixin({
     timerProgressBar: true
 }) : null;
 
-// =========================================================================
-// --- 3. AUTOCOMPLETADO POR DOCUMENTO (Supabase) ---
-// =========================================================================
+// --- 3. AUTOCOMPLETADO POR DOCUMENTO ---
 const inputDoc = document.getElementById("resDoc");
 
 if (inputDoc) {
@@ -280,36 +235,18 @@ if (inputDoc) {
 
             if (huespedes && huespedes.length > 0) {
                 const h = huespedes[0];
-
-                // Guardamos el ID del huésped en el dataset del formulario
                 if (form) form.dataset.idHuesped = h.id;
 
-                if (document.getElementById("resHuesped")) {
-                    document.getElementById("resHuesped").value = h.nombres_apellidos || "";
-                }
-                if (document.getElementById("resTelefono")) {
-                    document.getElementById("resTelefono").value = h.telefono || "";
-                }
-                if (document.getElementById("resCorreo")) {
-                    document.getElementById("resCorreo").value = h.correo || "";
-                }
-                if (document.getElementById("resNacionalidad")) {
-                    document.getElementById("resNacionalidad").value = h.nacionalidad || "Peruana";
-                }
-                if (document.getElementById("resNacimiento")) {
-                    document.getElementById("resNacimiento").value = h.fecha_nacimiento || ""; 
-                }
-                if (document.getElementById("resCiudad")) {
-                    document.getElementById("resCiudad").value = h.ciudad || ""; 
-                }
-                if (document.getElementById("resPreferencia")) {
-                    document.getElementById("resPreferencia").value = h.preferencias || ""; 
-                }
-                if (document.getElementById("resTipoDoc") && h.documento_tipo) {
-                    document.getElementById("resTipoDoc").value = h.documento_tipo;
-                }
+                if (document.getElementById("resHuesped")) document.getElementById("resHuesped").value = h.nombres_apellidos || "";
+                if (document.getElementById("resTelefono")) document.getElementById("resTelefono").value = h.telefono || "";
+                if (document.getElementById("resCorreo")) document.getElementById("resCorreo").value = h.correo || "";
+                if (document.getElementById("resNacionalidad")) document.getElementById("resNacionalidad").value = h.nacionalidad || "Peruana";
+                if (document.getElementById("resNacimiento")) document.getElementById("resNacimiento").value = h.fecha_nacimiento || ""; 
+                if (document.getElementById("resCiudad")) document.getElementById("resCiudad").value = h.ciudad || ""; 
+                if (document.getElementById("resPreferencia")) document.getElementById("resPreferencia").value = h.preferencias || ""; 
+                if (document.getElementById("resTipoDoc") && h.documento_tipo) document.getElementById("resTipoDoc").value = h.documento_tipo;
 
-                if (typeof Toast !== 'undefined') {
+                if (typeof Toast !== 'undefined' && Toast) {
                     Toast.fire({
                         icon: 'success',
                         title: 'Huésped encontrado en el sistema',
@@ -317,10 +254,8 @@ if (inputDoc) {
                     });
                 }
             } else {
-                // Si no existe, nos aseguramos de borrar cualquier ID previo para tratarlo como nuevo
                 if (form) delete form.dataset.idHuesped;
             }
-
         } catch (error) {
             console.error("Error al buscar huésped:", error.message || error);
         }
@@ -342,7 +277,7 @@ if (form) {
 
         if (new Date(checkOutFecha) < new Date(checkInFecha)) {
             alert("¡Atención! La fecha de salida (Check-Out) no puede ser anterior a la fecha de entrada (Check-In).");
-            return; // Detiene todo antes de tocar Supabase
+            return; 
         }
 
         const idUsuarioActivo = form.dataset.idUsuarioLogueado || 
@@ -358,7 +293,7 @@ if (form) {
         try {
             let idHuesped = form.dataset.idHuesped;
 
-            // 1. CAPTURAR DATOS DEL HUÉSPED (Se obtienen siempre en tiempo real para Insertar o Editar)
+            // 1. CAPTURAR DATOS DEL HUÉSPED
             const documentoTipo = document.getElementById("resTipoDoc").value; 
             const documentoNum = document.getElementById("resDoc").value.trim();
             const nombresApellidos = document.getElementById("resHuesped").value.trim();
@@ -373,7 +308,6 @@ if (form) {
                 throw new Error("Por favor ingresa el nombre y documento del huésped");
             }
 
-            // Creamos el objeto con la información limpia
             const datosHuesped = {
                 nombres_apellidos: nombresApellidos,
                 documento_tipo: documentoTipo,
@@ -388,9 +322,7 @@ if (form) {
 
             // LÓGICA DE PROCESAMIENTO DEL HUÉSPED
             if (!idHuesped) {
-                // ---------------------------------------------------------
                 // CASO A: SI EL HUÉSPED ES NUEVO -> INSERTAR
-                // ---------------------------------------------------------
                 const { data: nuevoHuesped, error: errorHuesped } = await supabase
                     .from("huespedes")
                     .insert([datosHuesped])
@@ -403,9 +335,7 @@ if (form) {
                 form.dataset.idHuesped = idHuesped; 
                 console.log("Nuevo huésped registrado exitosamente con ID:", idHuesped);
             } else {
-                // ---------------------------------------------------------
                 // CASO B: SI EL HUÉSPED YA EXISTE -> ACTUALIZAR (UPDATE)
-                // ---------------------------------------------------------
                 const { error: errorUpdate } = await supabase
                     .from("huespedes")
                     .update(datosHuesped)
@@ -421,22 +351,24 @@ if (form) {
             const checkOutHora = document.getElementById("resLateHora").value || null;
             
             const numeroPersonas = parseInt(document.getElementById("resNumPersonas")?.value) || 1; 
-            
             const tarifaPactada = parseFloat(document.getElementById("resTarifa").value) || 0;
             const moneda = document.getElementById("resMoneda").value;
             
             let tipoCambio = 1.000;
             if (moneda === "USD") {
-                tipoCambio = parseFloat(document.getElementById("resTipoCambio")?.value) || 3.750;
+                tipoCambio = parseFloat(inputTipoCambio?.value) || 3.750;
             }
 
             const cargoEarly = parseFloat(form.dataset.cargoEarly) || 0.00;
             const cargoLate = parseFloat(form.dataset.cargoLate) || 0.00;
 
-            // CAPTURA DE BOOLEANOS PARA EARLY Y LATE
             const tieneEarly = document.getElementById("resAplicaEarly")?.checked || false;
             const tieneLate = document.getElementById("resAplicaLate")?.checked || false;
             const desayuno = document.getElementById("resInfo").value === "true"; 
+            
+            // CAPTURA DE NUEVOS CAMPOS: Control de Niños
+            const aplicaNinos = document.getElementById("resAplicaNinos")?.checked || false;
+            const informacionNinos = document.getElementById("resInformacionNinos")?.value.trim() || null;
             
             let cochera = document.getElementById("resCochera").value.trim();
             if (!['Red Parking', 'Santa Mónica', 'No'].includes(cochera)) {
@@ -473,7 +405,9 @@ if (form) {
                 estado_reserva: estadoReserva, 
                 notas: notas,
                 tiene_early_checkin: tieneEarly,   
-                tiene_late_checkout: tieneLate     
+                tiene_late_checkout: tieneLate,
+                aplica_ninos: aplicaNinos,              // Mapeado a la BD
+                informacion_ninos: informacionNinos     // Mapeado a la BD
             };
 
             // 3. INSERTAR O ACTUALIZAR RESERVA EN SUPABASE
@@ -498,7 +432,7 @@ if (form) {
             }
 
             // =========================================================================
-            // 🌟 4. GESTIÓN AUTOMÁTICA DEL PAGO (CORREGIDO PARA LOGICA HOTELERA CENTRAL)
+            // 🌟 4. GESTIÓN AUTOMÁTICA DEL PAGO
             // =========================================================================
             const adelantoMonto = parseFloat(document.getElementById("resAdelantoMonto")?.value) || 0;
             
@@ -507,29 +441,26 @@ if (form) {
                 const metodoPagoSeleccionado = document.getElementById("resMetodoPago")?.value || "Efectivo";
                 const adelantoDetalle = document.getElementById("resAdelantoDetalle")?.value.trim() || null;
 
-                // 🏨 LÓGICA DE CONTROL HORARIO DE TRUJILLO PARA FECHA Y TURNO OPERATIVO
-const ahora = new Date();
-const horaPeru = parseInt(ahora.toLocaleTimeString('en-US', { timeZone: 'America/Lima', hour12: false, hour: '2-digit' }));
-const formateadorFecha = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
+                // 🏨 LÓGICA DE CONTROL HORARIO DE TRUJILLO
+                const ahora = new Date();
+                const horaPeru = parseInt(ahora.toLocaleTimeString('en-US', { timeZone: 'America/Lima', hour12: false, hour: '2-digit' }));
+                const formateadorFecha = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
 
-let fechaCalculada = formateadorFecha.format(ahora); // Por defecto "YYYY-MM-DD" hoy
-let turnoCalculado = '';
+                let fechaCalculada = formateadorFecha.format(ahora); 
+                let turnoCalculado = '';
 
-// Asignar Turno y corregir Fecha si es madrugada
-if (horaPeru >= 7 && horaPeru < 14) {
-    turnoCalculado = 'Mañana';
-} else if (horaPeru >= 14 && horaPeru < 21) {
-    turnoCalculado = 'Tarde';
-} else {
-    turnoCalculado = 'Noche';
-    // 💡 EL TRUCO DE MADRUGADA:
-    if (horaPeru >= 0 && horaPeru < 7) {
-        // Restamos las horas necesarias directamente para retroceder de forma segura en la línea de tiempo de Lima
-        const milisegundosEnUnDia = 24 * 60 * 60 * 1000;
-        const ayer = new Date(ahora.getTime() - milisegundosEnUnDia);
-        fechaCalculada = formateadorFecha.format(ayer);
-    }
-}
+                if (horaPeru >= 7 && horaPeru < 14) {
+                    turnoCalculado = 'Mañana';
+                } else if (horaPeru >= 14 && horaPeru < 21) {
+                    turnoCalculado = 'Tarde';
+                } else {
+                    turnoCalculado = 'Noche';
+                    if (horaPeru >= 0 && horaPeru < 7) {
+                        const milisegundosEnUnDia = 24 * 60 * 60 * 1000;
+                        const ayer = new Date(ahora.getTime() - milisegundosEnUnDia);
+                        fechaCalculada = formateadorFecha.format(ayer);
+                    }
+                }
 
                 const objetoPago = {
                     id_reserva: idReservaProcesada,
@@ -585,7 +516,7 @@ if (horaPeru >= 7 && horaPeru < 14) {
                     .eq("concepto", "Adelanto");
             }
 
-            if (typeof Toast !== 'undefined') {
+            if (typeof Toast !== 'undefined' && Toast) {
                 Toast.fire({ icon: 'success', title: 'Reserva y pago procesados correctamente' });
             }
 
@@ -619,7 +550,7 @@ const escucharReservas = async () => {
                 *,
                 huespedes ( nombres_apellidos, documento_num, documento_tipo, telefono, correo, nacionalidad, fecha_nacimiento, ciudad, preferencias ),
                 habitaciones ( numero, tipo ),
-                pagos ( id, adelanto_monto, metodo_pago, nro_operacion )
+                pagos ( id, monto_soles, adelanto_monto, metodo_pago, nro_operacion )
             `)
             .order("created_at", { ascending: false });
 
@@ -631,7 +562,7 @@ const escucharReservas = async () => {
         tablaBodyReal.innerHTML = "";
         listaReservasGlobal = reservas || [];
         
-        // 📊 Inicializamos cada contador usando el formato limpio (todo minúsculas, sin tildes, sin espacios)
+        // 📊 Inicializamos cada contador usando el formato limpio
         const conteo = { 
             "presencial": 0,
             "gmail": 0,
@@ -645,17 +576,15 @@ const escucharReservas = async () => {
         };
 
         listaReservasGlobal.forEach(res => {
-            // 1. Tomamos el medio de la BD, si viene vacío por defecto es Presencial
             let medioOriginal = res.medio_reserva || "Presencial";
             
-            // 2. 🌟 LIMPIEZA ABSOLUTA: Convertimos a minúsculas, quitamos tildes y removemos espacios
+            // 🌟 LIMPIEZA ABSOLUTA
             const medioLimpio = medioOriginal.trim()
                                              .toLowerCase()
                                              .normalize("NFD")
                                              .replace(/[\u0300-\u036f]/g, "")
                                              .replace(/\s/g, "");
 
-            // 3. Incrementamos el marcador usando la clave limpia
             if (conteo.hasOwnProperty(medioLimpio)) {
                 conteo[medioLimpio]++;
             } else {
@@ -668,17 +597,15 @@ const escucharReservas = async () => {
                 const fechaIn = new Date(res.check_in_fecha + 'T12:00:00');
                 const fechaOut = new Date(res.check_out_fecha + 'T12:00:00');
                 const diferenciaTiempo = fechaOut - fechaIn;
-                // Convertimos la diferencia de milisegundos a días/noches
                 noches = Math.max(0, Math.ceil(diferenciaTiempo / (1000 * 60 * 60 * 24)));
             }
             
-            // Si es un Day Use o error de fechas y da 0 noches, aseguramos al menos 1 para el cobro
             if (noches === 0) noches = 1;
 
             const tarifaPorNoche = parseFloat(res.tarifa_pactada) || 0;
             const simboloMoneda = res.moneda === 'USD' ? '$' : 'S/';
 
-            // 1. 🌟 Cálculo dinámico de cargos extras respetando la moneda de la reserva
+            // Cálculo dinámico de cargos extras
             const costoEarly = (res.tiene_early_checkin && parseFloat(res.cargo_early_checkin) === 0) 
                                 ? (tarifaPorNoche / 2) 
                                 : parseFloat(res.cargo_early_checkin) || 0;
@@ -687,7 +614,6 @@ const escucharReservas = async () => {
                               ? (tarifaPorNoche / 2) 
                               : parseFloat(res.cargo_late_checkout) || 0;
 
-            // 2. 🚀 El gran total suma la estadía completa y los recargos acumulados
             const totalEstadiaBase = tarifaPorNoche * noches;
             const totalCargosExtras = costoEarly + costoLate;
             const totalMostrar = totalEstadiaBase + totalCargosExtras;
@@ -733,7 +659,7 @@ const escucharReservas = async () => {
             tablaBodyReal.appendChild(tr);
         });
 
-        // 📈 Renderizado de los números en las tarjetas de la interfaz
+        // 📈 Renderizado de KPI tarjetas de interfaz
         Object.keys(conteo).forEach(idLimpio => {
             const el = document.getElementById(`stat-${idLimpio}`) || 
                        document.getElementById(`kpi-${idLimpio}`) || 
@@ -871,31 +797,32 @@ window.prepararEdicion = async (id) => {
         if (document.getElementById("resAplicaEarly")) document.getElementById("resAplicaEarly").checked = res.tiene_early_checkin || false;
         if (document.getElementById("resAplicaLate")) document.getElementById("resAplicaLate").checked = res.tiene_late_checkout || false;
 
+        // 🌟 CONFIGURACIÓN DE NIÑOS EN EL MODAL
+        if (document.getElementById("resAplicaNinos")) document.getElementById("resAplicaNinos").checked = res.aplica_ninos || false;
+        if (document.getElementById("resInformacionNinos")) document.getElementById("resInformacionNinos").value = res.informacion_ninos || "";
+
         // Tarifas y Moneda
         if (document.getElementById("resTarifa")) document.getElementById("resTarifa").value = res.tarifa_pactada || "";
         if (document.getElementById("resMoneda")) document.getElementById("resMoneda").value = res.moneda || "PEN";
-        if (document.getElementById("resTipoCambio")) document.getElementById("resTipoCambio").value = res.tipo_cambio || "1.000";
+        
+        const elTipoCambio = document.getElementById("resTipoCambio") || (typeof inputTipoCambio !== 'undefined' ? inputTipoCambio : null);
+        if (elTipoCambio) elTipoCambio.value = res.tipo_cambio || "1.000";
         
         const inputAdelanto = document.getElementById("resAdelantoMonto");
         const selectMetodo = document.getElementById("resMetodoPago");
         const inputDetalle = document.getElementById("resAdelantoDetalle");
 
-        // 🌟 ANTES:
-        // const pagoAdelanto = (res.pagos && Array.isArray(res.pagos)) ? res.pagos.find(p => parseFloat(p.adelanto_monto) > 0) : null;
-        
-        // 🌟 CAMBIAR POR ESTA CONFIGURACIÓN SEGURA:
+        // 🌟 CONFIGURACIÓN SEGURA PARA ADELANTOS
         const pagoAdelanto = (res.pagos && Array.isArray(res.pagos)) 
             ? res.pagos.find(p => parseFloat(p.monto_soles) > 0 || parseFloat(p.adelanto_monto) > 0) 
             : null;
         
         if (inputAdelanto) {
-            // Evaluamos primero 'monto_soles' que es nuestro campo definitivo de dinero real
             inputAdelanto.value = pagoAdelanto 
                 ? (pagoAdelanto.monto_soles || pagoAdelanto.adelanto_monto || "0.00") 
                 : "0.00";
         }
         
-        if (inputAdelanto) inputAdelanto.value = pagoAdelanto ? pagoAdelanto.adelanto_monto : "0.00";
         if (selectMetodo) selectMetodo.value = pagoAdelanto ? (pagoAdelanto.metodo_pago || "Efectivo") : "Efectivo";
         if (inputDetalle) inputDetalle.value = pagoAdelanto ? (pagoAdelanto.nro_operacion || "") : "";
 
@@ -949,7 +876,6 @@ window.eliminarReserva = async (id) => {
         el.addEventListener("change", verificarDisponibilidadRealTime);
     }
 });
-
 // --- 6. EXPORTAR EXCEL CON RANGO DE FECHAS (SUPABASE V2) ---
 window.exportarExcel = async () => {
     if (typeof Swal === 'undefined') return;
@@ -1017,11 +943,24 @@ window.exportarExcel = async () => {
                         <th>NRO OPERACION</th>
                         <th>MEDIO RESERVA</th>
                         <th>ESTADO</th>
+                        <th>APLICA NIÑOS</th>
+                        <th>DETALLE NIÑOS</th>
                         <th>NOTAS INTERNAS</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${reservasFiltradas.map(r => {
+                        const tarifaPorNoche = parseFloat(r.tarifa_pactada) || 0;
+
+                        // 🔄 Cálculo dinámico e idéntico de cargos extras (Tarifa / 2 si es automático)
+                        const costoEarly = (r.tiene_early_checkin && parseFloat(r.cargo_early_checkin) === 0) 
+                                            ? (tarifaPorNoche / 2) 
+                                            : parseFloat(r.cargo_early_checkin) || 0;
+
+                        const costoLate = (r.tiene_late_checkout && parseFloat(r.cargo_late_checkout) === 0) 
+                                          ? (tarifaPorNoche / 2) 
+                                          : parseFloat(r.cargo_late_checkout) || 0;
+
                         // 🌟 CORRECCIÓN OPERATIVA CENTRAL: Evaluar tanto monto_soles como adelanto_monto
                         const pagoAdelanto = (r.pagos && Array.isArray(r.pagos)) 
                             ? r.pagos.find(p => parseFloat(p.monto_soles) > 0 || parseFloat(p.adelanto_monto) > 0) 
@@ -1044,14 +983,16 @@ window.exportarExcel = async () => {
                             <td style="text-align:center;">${r.check_in_fecha || '---'}</td>
                             <td style="text-align:center;">${r.check_out_fecha || '---'}</td>
                             <td style="text-align:center;">${r.moneda || 'PEN'}</td>
-                            <td style="text-align:right;">${parseFloat(r.tarifa_pactada || 0).toFixed(2)}</td>
-                            <td style="text-align:right; color:#b45309;">${parseFloat(r.cargo_early_checkin || 0).toFixed(2)}</td>
-                            <td style="text-align:right; color:#b45309;">${parseFloat(r.cargo_late_checkout || 0).toFixed(2)}</td>
+                            <td style="text-align:right;">${tarifaPorNoche.toFixed(2)}</td>
+                            <td style="text-align:right; color:#b45309;">${costoEarly.toFixed(2)}</td>
+                            <td style="text-align:right; color:#b45309;">${costoLate.toFixed(2)}</td>
                             <td style="text-align:right; font-weight:bold; color:#16a34a;">${montoAdelanto.toFixed(2)}</td>
                             <td style="text-align:center;">${metodoPago}</td>
                             <td style="text-align:center;">'${nroOperacion}</td>
                             <td style="text-align:center;">${r.medio_reserva || 'Presencial'}</td>
                             <td style="text-align:center;">${r.estado_reserva || 'Confirmada'}</td>
+                            <td style="text-align:center;">${r.aplica_ninos ? 'SÍ' : 'NO'}</td>
+                            <td>${r.informacion_ninos || ''}</td>
                             <td>${r.notas || ''}</td>
                         </tr>
                         `;
@@ -1074,13 +1015,11 @@ window.exportarExcel = async () => {
 // --- FUNCIÓN DE INICIO Y ORQUESTACIÓN GLOBAL ---
 window.inicializarPagina = () => {
     console.log("Iniciando Módulo de Reservas - Hotel Central v2 (Supabase Production)");
-    // Única llamada controlada inicial para evitar solicitudes duplicadas innecesarias a la API
     if (typeof escucharReservas === 'function') {
         escucharReservas();
     }
 };
 
-// Disparador automático una vez el árbol del DOM esté completamente construido en pantalla
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => window.inicializarPagina());
 } else {

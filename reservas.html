@@ -103,7 +103,7 @@
                     </div>
                     <div class="form-group">
                         <label>Tipo Doc.</label>
-                        <select id="resTipoDoc" required>
+                        <select id="resTipoDoc">
                             <option value="DNI">DNI</option>
                             <option value="Pasaporte">Pasaporte</option>
                             <option value="CE">C.E.</option>
@@ -112,11 +112,11 @@
                     </div>
                     <div class="form-group">
                         <label>Nro. Documento</label>
-                        <input type="text" id="resDoc" required placeholder="Ej: 74589632">
+                        <input type="text" id="resDoc" placeholder="12345678">
                     </div>
                     <div class="form-group">
                         <label>Telefono</label>
-                        <input type="tel" id="resTelefono" required placeholder="999 999 999">
+                        <input type="tel" id="resTelefono" placeholder="999 999 999">
                     </div>
                     <div class="form-group">
                         <label>Nacionalidad</label>
@@ -124,7 +124,7 @@
                     </div>
                     <div class="form-group">
                         <label>Ciudad</label>
-                        <input type="text" id="resCiudad" placeholder="Lima">
+                        <input type="text" id="resCiudad" placeholder="Ciudad de residencia">
                     </div>
                     <div class="form-group">
                         <label>Nacimiento</label>
@@ -220,10 +220,21 @@
                         </select>
                     </div>
 
-                    <div class="form-group span-4">
+                    <div class="form-group span">
                         <label>Traslado Logístico</label>
                         <input type="text" id="resTraslado" placeholder="Detalles del vuelo o transporte">
                     </div>
+
+                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px;">
+                        <label for="resAplicaNinos" style="margin: 0; cursor: pointer; font-weight: bold; font-size: 12px;">¿Tiene Niños?</label>
+                        <input type="checkbox" id="resAplicaNinos" style="width: 20px; height: 20px; cursor: pointer;">
+                    </div>
+                    
+                    <div class="form-group span-2 ">
+                        <label>Información de los Niños</label>
+                        <input type="text" id="resInformacionNinos" placeholder="Detalles de los niños">
+                    </div>
+                    
                 </div>
 
                 <div class="form-section-title">TARIFA DE LA RESERVA</div>
@@ -241,7 +252,7 @@
                     </div>
                     <div class="form-group">
                         <label>T. Cambio</label>
-                        <input type="number" id="resTipoCambio" step="0.001" placeholder="3.50">
+                        <input type="number" id="resTipoCambio" step="0.01" placeholder="3.50">
                     </div>
                     <div class="form-group">
                         <label>Total Estancia</label>
@@ -266,13 +277,13 @@
                         <input type="number" id="resDiferencia" class="input-diferencia" step="0.01" readonly value="0.00">
                     </div>
                     <div class="form-group">
-                        <label>Nro. Operación / Nota</label>
-                        <input type="text" id="resAdelantoDetalle" placeholder="Ej: Yape 154823">
+                        <label>Detalle del Adelanto</label>
+                        <input type="text" id="resAdelantoDetalle" placeholder="Fecha del adelanto: dd/mm/yyyy">
                     </div>
                 </div>
 
                 <div class="form-grid-compact" style="margin-top: 10px;">
-                    <div class="form-group span-2">
+                    <div class="form-group span-4">
                         <label>Observaciones</label>
                         <input type="text" id="resObservaciones">
                     </div>
