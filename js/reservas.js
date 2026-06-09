@@ -196,18 +196,8 @@ window.calcularMontos = () => {
 
     let totalBrutoSoles = subtotalHospedajeSoles + cargoEarlySoles + cargoLateSoles;
 
-    // 🌟 C. Redondeo Condicional Inteligente
-    // Extraemos solo la parte decimal (Ej: 90.94 -> 0.94 / 90.40 -> 0.40)
-    let parteDecimal = totalBrutoSoles - Math.floor(totalBrutoSoles);
-    let totalFinalSoles;
-
-    if (parteDecimal >= 0.50) {
-        // Si es .50 o más, redondea al entero superior (Ej: 90.94 -> 91)
-        totalFinalSoles = Math.round(totalBrutoSoles);
-    } else {
-        // Si es menor a .50, mantiene sus decimales exactos (Ej: 90.40 -> 90.40)
-        totalFinalSoles = Math.round(totalBrutoSoles * 100) / 100;
-    }
+    // 🌟 C. Redondeo estricto hacia arriba (Ej: 90.15 -> 91.00)
+    let totalFinalSoles = Math.ceil(totalBrutoSoles);
 
     if (form) {
         form.dataset.cargoEarly = cargoEarlySoles.toFixed(2);
