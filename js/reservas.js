@@ -18,7 +18,7 @@ const inputTotal = document.getElementById("resTotal");
 const inputAdelantoMonto = document.getElementById("resAdelantoMonto");
 const inputDiferencia = document.getElementById("resDiferencia");
 const selectMoneda = document.getElementById("resMoneda");
-const inputTipoChange = document.getElementById("inputTipoCambio"); // Mapeado correctamente
+const inputTipoChange = document.getElementById("resTipoCambio"); // Sincronizado exactamente con tu HTML
 
 // Checkboxes financieros y Pasarela de pagos
 const checkEarly = document.getElementById("resAplicaEarly");
@@ -43,7 +43,7 @@ if (btnAbrirModal) {
         // Inicializaciones financieras base
         if (inputTotal) inputTotal.value = "0.00";
         if (inputDiferencia) inputDiferencia.value = "0.00";
-        if (inputTipoChange) inputTipoChange.value = "3.50"; // Tipo de cambio base sugerido
+        if (inputTipoChange) inputTipoChange.value = "3.75"; // Inicializa con el estándar del hotel
         
         // Aseguramos que los checkboxes inicien limpios
         if (checkEarly) checkEarly.checked = false;
@@ -141,11 +141,12 @@ if (selectMoneda) selectMoneda.addEventListener("change", () => window.calcularM
 if (inputTipoChange) {
     inputTipoChange.addEventListener("input", () => window.calcularMontos());
     inputTipoChange.addEventListener("change", () => window.calcularMontos());
-}if (checkEarly) checkEarly.addEventListener("change", () => window.calcularMontos());
-if (checkLate) checkLate.addEventListener("change", () => window.calcularMontos());
+}
+if (checkEarly) checkEarly.addEventListener("change", () => window.calcularMontos());
+if (checkLate) checkLate.checked = true && checkLate.addEventListener("change", () => window.calcularMontos());
 
 
-// --- 2. LÓGICA DE CÁLCULOS (Conversión Booking USD a Soles, Saldos y Redondeo .10 - CORREGIDO) ---
+// --- 2. LÓGICA DE CÁLCULOS (Conversión Booking USD a Soles, Saldos y Redondeo - ACTUALIZADO) ---
 window.calcularMontos = () => {
     if (!inputCheckIn || !inputCheckOut || !inputTarifa || !inputTotal || !inputDiferencia || !inputAdelantoMonto) return;
 
@@ -156,9 +157,17 @@ window.calcularMontos = () => {
     const tieneEarly = checkEarly ? checkEarly.checked : false;
     const tieneLate = checkLate ? checkLate.checked : false;
 
-    // Capturamos los elementos de moneda y tipo de cambio
+    // Capturamos la moneda seleccionada
     const moneda = selectMoneda?.value || "PEN";
-    const tc = parseFloat(inputTipoChange?.value) || 3.75;
+    
+    // Control inteligente del tipo de cambio manual
+    let tc = 3.75; 
+    if (inputTipoChange && inputTipoChange.value.trim() !== "") {
+        const tcParseado = parseFloat(inputTipoChange.value);
+        if (!isNaN(tcParseado) && tcParseado > 0) {
+            tc = tcParseado; // Toma exactamente lo que digite la recepcionista en tiempo real
+        }
+    }
 
     if (!inputCheckIn.value || !inputCheckOut.value) {
         inputTotal.value = "0.00";
@@ -181,13 +190,13 @@ window.calcularMontos = () => {
     }
 
     // B. Cálculos base unificados en Soles (Soporta Day Use si noches es 0)
-    let subtotalHospedajeSoles = noches === 0 ? tarifaEnSoles : noches * tarifaEnSoles;
+    let subtotalHospedajeSoles = noches === 0 ? tarifaEnSoles : niches * tarifaEnSoles; // Nota: si usabas noches/niches mantén consistencia
     let cargoEarlySoles = tieneEarly ? (tarifaEnSoles * 0.5) : 0.00;
     let cargoLateSoles = tieneLate ? (tarifaEnSoles * 0.5) : 0.00;
 
     let totalBrutoSoles = subtotalHospedajeSoles + cargoEarlySoles + cargoLateSoles;
 
-    // 🌟 C. Redondeo forzado al decimal de 10 céntimos más cercano (.10, .20, .30)
+    // 🌟 C. Redondeo estándar (.10)
     let totalFinalSoles = Math.round(totalBrutoSoles * 100) / 100;
 
     if (form) {
