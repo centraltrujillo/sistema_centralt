@@ -231,9 +231,34 @@ const Toast = typeof Swal !== 'undefined' ? Swal.mixin({
 }) : null;
 
 
-// --- 3. AUTOCOMPLETADO POR DOCUMENTO ---
+// --- 3. AUTOCOMPLETADO POR DOCUMENTO O NOMBRE ---
 const inputDoc = document.getElementById("resDoc");
+const inputHuespedNombre = document.getElementById("resHuesped"); // Tu input de Nombres y Apellidos
 
+// Función reutilizable para rellenar los campos del formulario
+const rellenarCamposHuesped = (h) => {
+    if (form) form.dataset.idHuesped = h.id;
+
+    if (document.getElementById("resHuesped")) document.getElementById("resHuesped").value = h.nombres_apellidos || "";
+    if (document.getElementById("resDoc")) document.getElementById("resDoc").value = h.documento_num || "";
+    if (document.getElementById("resTipoDoc") && h.documento_tipo) document.getElementById("resTipoDoc").value = h.documento_tipo;
+    if (document.getElementById("resTelefono")) document.getElementById("resTelefono").value = h.telefono || "";
+    if (document.getElementById("resCorreo")) document.getElementById("resCorreo").value = h.correo || "";
+    if (document.getElementById("resNacionalidad")) document.getElementById("resNacionalidad").value = h.nacionalidad || "Peruana";
+    if (document.getElementById("resNacimiento")) document.getElementById("resNacimiento").value = h.fecha_nacimiento || ""; 
+    if (document.getElementById("resCiudad")) document.getElementById("resCiudad").value = h.ciudad || ""; 
+    if (document.getElementById("resPreferencia")) document.getElementById("resPreferencia").value = h.preferencias || ""; 
+
+    if (typeof Toast !== 'undefined' && Toast) {
+        Toast.fire({
+            icon: 'success',
+            title: 'Huésped encontrado en el sistema',
+            background: '#f0fdf4' 
+        });
+    }
+};
+
+// A. Búsqueda por Documento (Al perder el foco)
 if (inputDoc) {
     inputDoc.addEventListener("blur", async (e) => {
         const docNum = e.target.value.trim();
@@ -248,30 +273,41 @@ if (inputDoc) {
             if (error) throw error;
 
             if (huespedes && huespedes.length > 0) {
-                const h = huespedes[0];
-                if (form) form.dataset.idHuesped = h.id;
-
-                if (document.getElementById("resHuesped")) document.getElementById("resHuesped").value = h.nombres_apellidos || "";
-                if (document.getElementById("resTelefono")) document.getElementById("resTelefono").value = h.telefono || "";
-                if (document.getElementById("resCorreo")) document.getElementById("resCorreo").value = h.correo || "";
-                if (document.getElementById("resNacionalidad")) document.getElementById("resNacionalidad").value = h.nacionalidad || "Peruana";
-                if (document.getElementById("resNacimiento")) document.getElementById("resNacimiento").value = h.fecha_nacimiento || ""; 
-                if (document.getElementById("resCiudad")) document.getElementById("resCiudad").value = h.ciudad || ""; 
-                if (document.getElementById("resPreferencia")) document.getElementById("resPreferencia").value = h.preferencias || ""; 
-                if (document.getElementById("resTipoDoc") && h.documento_tipo) document.getElementById("resTipoDoc").value = h.documento_tipo;
-
-                if (typeof Toast !== 'undefined' && Toast) {
-                    Toast.fire({
-                        icon: 'success',
-                        title: 'Huésped encontrado en el sistema',
-                        background: '#f0fdf4' 
-                    });
-                }
+                rellenarCamposHuesped(huespedes[0]);
             } else {
                 if (form) delete form.dataset.idHuesped;
             }
         } catch (error) {
-            console.error("Error al buscar huésped:", error.message || error);
+            console.error("Error al buscar huésped por documento:", error.message || error);
+        }
+    });
+}
+
+// B. Búsqueda por Nombre y Apellidos (Al perder el foco)
+if (inputHuespedNombre) {
+    inputHuespedNombre.addEventListener("blur", async (e) => {
+        const nombreBusqueda = e.target.value.trim();
+        
+        // Evitamos buscar si el texto es muy corto o si ya se autocompletó mediante el documento
+        if (nombreBusqueda.length < 5 || form.dataset.idHuesped) return;
+
+        try {
+            // El operador % a los lados permite buscar cualquier coincidencia que contenga ese texto
+            const { data: huespedes, error } = await supabase
+                .from("huespedes")
+                .select("*")
+                .ilike("nombres_apellidos", `%${nombreBusqueda}%`)
+                .limit(1); // Traemos el primer resultado más cercano
+
+            if (error) throw error;
+
+            if (huespedes && huespedes.length > 0) {
+                rellenarCamposHuesped(huespedes[0]);
+            } else {
+                if (form) delete form.dataset.idHuesped;
+            }
+        } catch (error) {
+            console.error("Error al buscar huésped por nombre:", error.message || error);
         }
     });
 }
@@ -417,7 +453,7 @@ if (form) {
                 notes: notas,
                 tiene_early_checkin: tieneEarly,   
                 tiene_late_checkout: tieneLate,
-                aplica_ninos: aplicaNinos,              
+                tiene_ninos: aplicaNinos,              
                 informacion_ninos: informacionNinos     
             };
 
