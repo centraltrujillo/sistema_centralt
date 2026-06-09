@@ -450,7 +450,7 @@ if (form) {
                 traslado: traslado,
                 medio_reserva: medioReserva,
                 estado_reserva: estadoReserva, 
-                notes: notas,
+                notas: notas,
                 tiene_early_checkin: tieneEarly,   
                 tiene_late_checkout: tieneLate,
                 tiene_ninos: aplicaNinos,              
