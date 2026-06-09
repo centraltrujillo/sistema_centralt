@@ -43,7 +43,7 @@ if (btnAbrirModal) {
         // Inicializaciones financieras base
         if (inputTotal) inputTotal.value = "0.00";
         if (inputDiferencia) inputDiferencia.value = "0.00";
-        if (inputTipoChange) inputTipoChange.value = "3.75"; // Inicializa con el estándar del hotel
+        if (inputTipoChange) inputTipoChange.value = "1.00"; // Inicializa con el estándar del hotel
         
         // Aseguramos que los checkboxes inicien limpios
         if (checkEarly) checkEarly.checked = false;
@@ -403,9 +403,10 @@ if (form) {
             const ciudad = document.getElementById("resCiudad").value.trim() || null;
             const preferencias = document.getElementById("resPreferencia").value.trim() || null;
 
-            if (!documentoNum || !nombresApellidos) {
-                throw new Error("Por favor ingresa el nombre y documento del huésped");
-            }
+            // 🔄 MODIFICADO: Ahora solo el nombre es estrictamente obligatorio
+if (!nombresApellidos) {
+    throw new Error("Por favor, ingresa los nombres y apellidos del huésped.");
+}
 
             const datosHuesped = {
                 nombres_apellidos: nombresApellidos,

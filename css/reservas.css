@@ -284,10 +284,14 @@
 
 /* 6. FORMULARIO COMPACTO (4 COLUMNAS) */
 .form-body-no-scroll {
-    padding: 10px 25px;
+    padding: 20px 25px;
     display: flex;
     flex-direction: column;
-    overflow-y: auto; /* Fallback por si la pantalla es muy pequeña */
+    flex-grow: 1;          /* Fuerza a esta sección a ocupar todo el espacio disponible */
+    overflow-y: auto;      /* Activa el scroll vertical solo en esta área si el contenido rebasa */
+    max-height: 100%;      /* No deja que empuje la barra de acciones hacia afuera */
+    
+    box-sizing: border-box;
 }
 
 .form-grid-compact {
