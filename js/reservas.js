@@ -147,29 +147,23 @@ if (checkLate) checkLate.addEventListener("change", () => window.calcularMontos(
 window.calcularMontos = () => {
     if (!inputCheckIn || !inputCheckOut || !inputTarifa || !inputTotal || !inputDiferencia || !inputAdelantoMonto) return;
 
-    // 1. Captura de datos básicos y fechas
     const fIn = new Date(inputCheckIn.value + 'T00:00:00');
     const fOut = new Date(inputCheckOut.value + 'T00:00:00');
-    const tarifaOrigen = parseFloat(inputTarifa.value) || 0;
-    
-    // Captura el tipo de cambio (si no hay, usa 3.75 por seguridad para evitar multiplicar por 0 o NaN)
-    const tc = parseFloat(inputTipoCambio?.value) || 3.75; 
-    const moneda = selectMoneda?.value || 'PEN';
+    const tarifaBase = parseFloat(inputTarifa.value) || 0;
 
-    // Captura de Checkboxes de recargos
-    const checkEarly = document.getElementById("resAplicaEarly");
-    const checkLate = document.getElementById("resAplicaLate");
     const tieneEarly = checkEarly ? checkEarly.checked : false;
     const tieneLate = checkLate ? checkLate.checked : false;
 
-    // Validación de fechas vacías
+    // Capturamos los elementos de moneda y tipo de cambio
+    const moneda = selectMoneda?.value || "PEN";
+    const tipoCambio = parseFloat(inputTipoCambio?.value) || 1.000;
+
     if (!inputCheckIn.value || !inputCheckOut.value) {
         inputTotal.value = "0.00";
         inputDiferencia.value = "0.00";
         return;
     }
 
-    // 2. Cálculo de Noches
     const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
 
     if (noches < 0 || (noches === 0 && !tieneEarly && !tieneLate)) {
@@ -178,52 +172,40 @@ window.calcularMontos = () => {
         return;
     }
     
-    // 🔥 3. CONVERSIÓN INMEDIATA A SOLES (Unificamos la moneda antes de procesar montos y extras)
-    let tarifaEnSoles = tarifaOrigen;
+    // 1. Cálculos base en la moneda pactada
+    let subtotalHospedaje = noches === 0 ? tarifaBase : noches * tarifaBase;
+    let cargoEarly = tieneEarly ? (tarifaBase * 0.5) : 0.00;
+    let cargoLate = tieneLate ? (tarifaBase * 0.5) : 0.00;
+
+    let totalReservaMismaMoneda = subtotalHospedaje + cargoEarly + cargoLate;
+
+    // 2. 🎯 CONVERSIÓN CRÍTICA: Si es USD, convertimos el total final a soles
+    let totalFinalMostrado = totalReservaMismaMoneda;
     if (moneda === "USD") {
-        tarifaEnSoles = tarifaOrigen * tc; // Ejemplo: 30 USD * 3.5 = 105.00 PEN
+        totalFinalMostrado = totalReservaMismaMoneda * tipoCambio;
     }
 
-    // 4. Subtotal de Hospedaje ya unificado en Soles (Soporta Day Use si noches es 0)
-    let subtotalHospedajeSoles = (noches === 0) ? tarifaEnSoles : (noches * tarifaEnSoles);
-
-    // 5. Calcular cargos de penalidades directamente sobre la tarifa ya convertida a Soles
-    let cargoEarlySoles = tieneEarly ? (tarifaEnSoles * 0.5) : 0.00; // Ejemplo: 105 * 0.5 = 52.50 PEN
-    let cargoLateSoles = tieneLate ? (tarifaEnSoles * 0.5) : 0.00;   // Ejemplo: 105 * 0.5 = 52.50 PEN
-
-    // 6. El Gran Total Absoluto en Soles con REDONDEO CONTROLADO (.10, .20, .30)
-    let totalBrutoSoles = subtotalHospedajeSoles + cargoEarlySoles + cargoLateSoles;
-    
-    // Forzamos matemáticamente el redondeo al decimal de 10 céntimos más cercano
-    let totalFinalSoles = Math.round(totalBrutoSoles * 10) / 10; 
-
-    // Guardamos los cargos calculados en los datasets en SOLES para el backend
     if (form) {
-        form.dataset.cargoEarly = cargoEarlySoles.toFixed(2);
-        form.dataset.cargoLate = cargoLateSoles.toFixed(2);
+        form.dataset.cargoEarly = cargoEarly;
+        form.dataset.cargoLate = cargoLate;
     }
 
-    // Pintamos el total final en Soles en el input de la pantalla
-    inputTotal.value = totalFinalSoles.toFixed(2);
+    // El total mostrado en la interfaz ahora sí reflejará soles si se seleccionó USD
+    inputTotal.value = totalFinalMostrado.toFixed(2);
 
-    // 7. Restar el Adelanto (en Soles) y calcular el Pendiente Real (en Soles)
     let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
 
-    // Guardarraíl para impedir que el recepcionista digite un adelanto mayor al total redondeado
-    if (adelanto > totalFinalSoles && totalFinalSoles > 0) {
-        adelanto = totalFinalSoles;
-        inputAdelantoMonto.value = totalFinalSoles.toFixed(2);
+    // El adelanto se evalúa contra el total final convertido
+    if (adelanto > totalFinalMostrado && totalFinalMostrado > 0) {
+        adelanto = totalFinalMostrado;
+        inputAdelantoMonto.value = totalFinalMostrado.toFixed(2);
         
-        if (typeof Toast !== 'undefined' && Toast) {
-            Toast.fire({
-                icon: 'warning',
-                title: 'El adelanto no puede superar al total en soles'
-            });
+        if (Toast) {
+            Toast.fire({ icon: 'warning', title: 'El adelanto no puede superar al total' });
         }
     }
 
-    // Restamos y mostramos el pendiente exacto (Total Soles Redondeado - Adelanto Soles)
-    inputDiferencia.value = (totalFinalSoles - adelanto).toFixed(2);
+    inputDiferencia.value = (totalFinalMostrado - adelanto).toFixed(2);
 };
 
 const Toast = typeof Swal !== 'undefined' ? Swal.mixin({
