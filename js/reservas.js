@@ -190,7 +190,7 @@ window.calcularMontos = () => {
     }
 
     // B. Cálculos base unificados en Soles (Soporta Day Use si noches es 0)
-    let subtotalHospedajeSoles = noches === 0 ? tarifaEnSoles : niches * tarifaEnSoles; // Nota: si usabas noches/niches mantén consistencia
+    let subtotalHospedajeSoles = noches === 0 ? tarifaEnSoles : noches * tarifaEnSoles; 
     let cargoEarlySoles = tieneEarly ? (tarifaEnSoles * 0.5) : 0.00;
     let cargoLateSoles = tieneLate ? (tarifaEnSoles * 0.5) : 0.00;
 
