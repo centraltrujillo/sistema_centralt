@@ -196,8 +196,18 @@ window.calcularMontos = () => {
 
     let totalBrutoSoles = subtotalHospedajeSoles + cargoEarlySoles + cargoLateSoles;
 
-    // 🌟 C. Redondeo estándar (.10)
-    let totalFinalSoles = Math.round(totalBrutoSoles * 100) / 100;
+    // 🌟 C. Redondeo Condicional Inteligente
+    // Extraemos solo la parte decimal (Ej: 90.94 -> 0.94 / 90.40 -> 0.40)
+    let parteDecimal = totalBrutoSoles - Math.floor(totalBrutoSoles);
+    let totalFinalSoles;
+
+    if (parteDecimal >= 0.50) {
+        // Si es .50 o más, redondea al entero superior (Ej: 90.94 -> 91)
+        totalFinalSoles = Math.round(totalBrutoSoles);
+    } else {
+        // Si es menor a .50, mantiene sus decimales exactos (Ej: 90.40 -> 90.40)
+        totalFinalSoles = Math.round(totalBrutoSoles * 100) / 100;
+    }
 
     if (form) {
         form.dataset.cargoEarly = cargoEarlySoles.toFixed(2);
@@ -235,7 +245,10 @@ const Toast = typeof Swal !== 'undefined' ? Swal.mixin({
 const inputDoc = document.getElementById("resDoc");
 const inputHuespedNombre = document.getElementById("resHuesped"); // Tu input de Nombres y Apellidos
 
-// Función reutilizable para rellenar los campos del formulario
+// 🌟 NUEVO: Declaramos la referencia al datalist que crearemos en el HTML
+const datalistHuespedes = document.getElementById("listaHuespedesSugeridos");
+
+// Función reutilizable para rellenar los campos del formulario (SE QUEDA IGUAL)
 const rellenarCamposHuesped = (h) => {
     if (form) form.dataset.idHuesped = h.id;
 
@@ -258,7 +271,7 @@ const rellenarCamposHuesped = (h) => {
     }
 };
 
-// A. Búsqueda por Documento (Al perder el foco)
+// A. Búsqueda por Documento (SE QUEDA IGUAL)
 if (inputDoc) {
     inputDoc.addEventListener("blur", async (e) => {
         const docNum = e.target.value.trim();
@@ -283,31 +296,67 @@ if (inputDoc) {
     });
 }
 
-// B. Búsqueda por Nombre y Apellidos (Al perder el foco)
-if (inputHuespedNombre) {
-    inputHuespedNombre.addEventListener("blur", async (e) => {
+// 🔄 B. MODIFICADO: Búsqueda dinámica con Lista de Sugerencias (Datalist)
+if (inputHuespedNombre && datalistHuespedes) {
+    // Vinculamos el input de texto con el contenedor de opciones
+    inputHuespedNombre.setAttribute("list", "listaHuespedesSugeridos");
+
+    // Evento 'input': Se ejecuta cada vez que el usuario escribe una letra
+    inputHuespedNombre.addEventListener("input", async (e) => {
         const nombreBusqueda = e.target.value.trim();
         
-        // Evitamos buscar si el texto es muy corto o si ya se autocompletó mediante el documento
-        if (nombreBusqueda.length < 5 || form.dataset.idHuesped) return;
+        // Limpiamos las opciones previas para que no se acumulen
+        datalistHuespedes.innerHTML = "";
+
+        // Si ya se buscó por DNI o el texto es muy corto, no consultamos a Supabase
+        if (nombreBusqueda.length < 4 || (form && form.dataset.idHuesped)) return;
 
         try {
-            // El operador % a los lados permite buscar cualquier coincidencia que contenga ese texto
+            // Buscamos coincidencias parciales sin el .limit(1) para poder ver los homónimos
             const { data: huespedes, error } = await supabase
                 .from("huespedes")
-                .select("*")
+                .select("id, nombres_apellidos, documento_num, documento_tipo")
                 .ilike("nombres_apellidos", `%${nombreBusqueda}%`)
-                .limit(1); // Traemos el primer resultado más cercano
+                .limit(5); // Traemos hasta un máximo de 5 sugerencias
 
             if (error) throw error;
 
             if (huespedes && huespedes.length > 0) {
-                rellenarCamposHuesped(huespedes[0]);
-            } else {
-                if (form) delete form.dataset.idHuesped;
+                huespedes.forEach(h => {
+                    const option = document.createElement("option");
+                    // El valor que se inyectará en el input al hacer clic
+                    option.value = h.nombres_apellidos; 
+                    // Texto secundario que ayuda a la recepcionista a diferenciar (ej: DNI: 75095174)
+                    option.textContent = `${h.documento_tipo}: ${h.documento_num}`; 
+                    
+                    datalistHuespedes.appendChild(option);
+                });
             }
         } catch (error) {
-            console.error("Error al buscar huésped por nombre:", error.message || error);
+            console.error("Error en sugerencias de nombres:", error.message || error);
+        }
+    });
+
+    // Evento 'change': Se ejecuta cuando la recepcionista hace clic en una opción de la lista
+    inputHuespedNombre.addEventListener("change", async (e) => {
+        const nombreSeleccionado = e.target.value.trim();
+        if (!nombreSeleccionado) return;
+        
+        try {
+            // Traemos todos los datos del huésped seleccionado de la base de datos
+            const { data: huespedes, error } = await supabase
+                .from("huespedes")
+                .select("*")
+                .eq("nombres_apellidos", nombreSeleccionado);
+
+            if (error) throw error;
+
+            if (huespedes && huespedes.length > 0) {
+                // Si hay homónimos idénticos en nombre, por defecto tomará el primero.
+                rellenarCamposHuesped(huespedes[0]);
+            }
+        } catch (error) {
+            console.error("Error al cargar datos del huésped seleccionado:", error.message || error);
         }
     });
 }
