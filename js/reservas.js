@@ -138,8 +138,10 @@ if (inputCheckIn) inputCheckIn.addEventListener("change", () => window.calcularM
 if (inputCheckOut) inputCheckOut.addEventListener("change", () => window.calcularMontos());
 if (inputAdelantoMonto) inputAdelantoMonto.addEventListener("input", () => window.calcularMontos());
 if (selectMoneda) selectMoneda.addEventListener("change", () => window.calcularMontos());
-if (inputTipoChange) inputTipoChange.addEventListener("input", () => window.calcularMontos());
-if (checkEarly) checkEarly.addEventListener("change", () => window.calcularMontos());
+if (inputTipoChange) {
+    inputTipoChange.addEventListener("input", () => window.calcularMontos());
+    inputTipoChange.addEventListener("change", () => window.calcularMontos());
+}if (checkEarly) checkEarly.addEventListener("change", () => window.calcularMontos());
 if (checkLate) checkLate.addEventListener("change", () => window.calcularMontos());
 
 
@@ -186,7 +188,7 @@ window.calcularMontos = () => {
     let totalBrutoSoles = subtotalHospedajeSoles + cargoEarlySoles + cargoLateSoles;
 
     // 🌟 C. Redondeo forzado al decimal de 10 céntimos más cercano (.10, .20, .30)
-    let totalFinalSoles = Math.round(totalBrutoSoles * 10) / 10;
+    let totalFinalSoles = Math.round(totalBrutoSoles * 100) / 100;
 
     if (form) {
         form.dataset.cargoEarly = cargoEarlySoles.toFixed(2);
