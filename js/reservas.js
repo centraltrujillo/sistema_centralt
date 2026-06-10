@@ -700,13 +700,24 @@ const escucharReservas = async () => {
             const totalCargosExtras = costoEarly + costoLate;
             const totalMostrar = totalEstadiaBase + totalCargosExtras;
 
+            // 👶 LÓGICA AGREGADA: Verificar si la reserva incluye detalles de niños
+            const detallesNiños = res.informacion_ninos && res.informacion_ninos.trim() !== "" 
+                ? res.informacion_ninos.trim() 
+                : null;
+
             const tr = document.createElement("tr");
             tr.className = "border-b border-gray-100 hover:bg-gray-50 transition-colors";
             
+            // 🔄 FILA HTML ACTUALIZADA: Se añadió la sección de niños en la primera celda
             tr.innerHTML = `
                 <td class="p-3">
                     <div class="font-bold text-gray-800">${res.huespedes?.nombres_apellidos || 'Sin Nombre'}</div>
                     <div class="text-xs text-gray-400">${res.huespedes?.documento_num || '---'}</div>
+                    ${detallesNiños ? `
+                        <div class="mt-1 flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 w-max font-medium" title="${detallesNiños}">
+                            <i class="fa-solid fa-child text-xs"></i> <span>${detallesNiños}</span>
+                        </div>
+                    ` : ''}
                 </td>
                 <td class="p-3 text-gray-600 text-sm">
                     ${res.created_at ? new Date(res.created_at).toLocaleDateString('es-PE') : '---'}
