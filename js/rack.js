@@ -508,6 +508,12 @@ if (horaPeru >= 7 && horaPeru < 14) {
             }
         }
 
+        const checkNinosDOM = document.getElementById("resAplicaNinos"); 
+            const aplicaNinos = checkNinosDOM ? (checkNinosDOM.type === "checkbox" ? checkNinosDOM.checked : checkNinosDOM.value === "true") : false;
+            
+            const txtInfoNinosDOM = document.getElementById("resInformacionNinos");
+            const informacionNinos = txtInfoNinosDOM ? txtInfoNinosDOM.value.trim() : "N/A";
+
         const objetoReserva = {
             id_huesped: idHuespedExistente, 
             id_usuario: idUsuarioActivo, 
@@ -1779,30 +1785,41 @@ if (badgeEst) {
         if (document.getElementById("viewResTraslado")) document.getElementById("viewResTraslado").textContent = res.traslado || "No ";
         if (document.getElementById("viewResNotas")) document.getElementById("viewResNotas").textContent = res.notas || "Sin observaciones adicionales.";
 
-        // --- D. TRATAMIENTO FINANCIERO Y AUDITORÍA ---
+// --- D. TRATAMIENTO FINANCIERO Y AUDITORÍA ---
 const simboloTarifa = res.moneda === 'USD' ? '$' : 'S/';
 const simboloSoles = 'S/';
 const tarifaPorNoche = parseFloat(res.tarifa_pactada) || 0;
 const tipoCambio = parseFloat(res.tipo_cambio) || 1.000;
 
-// 🌟 NUEVO: Calculamos la tarifa de una noche convertida a Soles para usarla de base en los cargos extras
-const tarifaEnSoles = res.moneda === 'USD' ? (tarifaPorNoche * tipoCambio) : tarifaPorNoche;
+// 🌟 CORREGIDO: Redondeamos la conversión inicial a Soles a 2 decimales para evitar decimales basura
+let tarifaEnSoles = res.moneda === 'USD' ? (tarifaPorNoche * tipoCambio) : tarifaPorNoche;
+tarifaEnSoles = parseFloat(tarifaEnSoles.toFixed(2));
 
-// Cálculo dinámico de cargos corregido (usando la tarifa base en SOLES si el cobro por defecto es la mitad)
-const costoEarly = (res.tiene_early_checkin && parseFloat(res.cargo_early_checkin) === 0) 
-                    ? (tarifaEnSoles / 2) 
-                    : parseFloat(res.cargo_early_checkin) || 0;
+// Cálculo dinámico de cargos corregido (Redondeando la mitad de la tarifa a 2 decimales para la lógica de negocio)
+let costoEarly = 0;
+if (res.tiene_early_checkin) {
+    costoEarly = (parseFloat(res.cargo_early_checkin) === 0) 
+        ? parseFloat((tarifaEnSoles / 2).toFixed(2)) 
+        : parseFloat(res.cargo_early_checkin) || 0;
+}
 
-const costoLate = (res.tiene_late_checkout && parseFloat(res.cargo_late_checkout) === 0) 
-                  ? (tarifaEnSoles / 2) 
-                  : parseFloat(res.cargo_late_checkout) || 0;
+let costoLate = 0;
+if (res.tiene_late_checkout) {
+    costoLate = (parseFloat(res.cargo_late_checkout) === 0) 
+        ? parseFloat((tarifaEnSoles / 2).toFixed(2)) 
+        : parseFloat(res.cargo_late_checkout) || 0;
+}
 
-// Obtener info del adelanto
+// Obtener info del adelanto (Monto bruto ya registrado en caja)
 const pagoInfo = Array.isArray(res.pagos) ? res.pagos.find(p => p.concepto === 'Adelanto') : null;
 const adelantoMontoSoles = parseFloat(pagoInfo?.monto_soles) || 0;
 
-// Liquidación Total (Multiplicamos la tarifa ya en soles por las noches, y sumamos los cargos ya en soles)
-const liquidacionTotal = (tarifaEnSoles * nochesCalculadas) + costoEarly + costoLate;
+// Subtotal de la estadía en Soles con decimales exactos
+const subtotalEstadiaSoles = tarifaEnSoles * nochesCalculadas;
+const liquidacionTotalRaw = subtotalEstadiaSoles + costoEarly + costoLate;
+
+// 🌟 NUEVO REDONDEO: Forzamos que cualquier decimal (ej: .42 o .98) suba al entero más cercano
+const liquidacionTotal = Math.ceil(liquidacionTotalRaw);
 
 // --- GESTIÓN DE AUDITORÍA Y OPERACIÓN (NUEVO) ---
 const blockOperacion = document.getElementById("viewBlockOperacion");
