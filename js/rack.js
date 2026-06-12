@@ -307,7 +307,7 @@ if (inputHuespedNombre && datalistHuespedes) {
 // ==========================================================================
 // --- 3. LÓGICA DE NEGOCIO  ---
 // ==========================================================================
-window.calcularMontosNuevoModulo = () => {
+window.calcularMontos = () => {
     
     const nInputCheckIn     = inputCheckIn;       // Tu nuevo input de entrada
     const nInputCheckOut    = inputCheckOut;      // Tu nuevo input de salida
@@ -1186,25 +1186,25 @@ const escucharReservas = async () => {
                 const fFin = new Date(fechaFinStr + 'T00:00:00');
 
                 // Recorremos todos los días que abarca este bloque visual específico
-                let fechaIterada = new Date(fInicio);
-                while (fechaIterada <= fFin) {
-                    const fechaClave = fechaIterada.toISOString().split('T')[0];
+let fechaIterada = new Date(fInicio);
+while (fechaIterada <= fFin) {
+    const fechaClave = fechaIterada.toISOString().split('T')[0];
 
-                    // Si es el día de salida de una estadía normal (sin Late), no ocupa la cama la noche de ese día.
-                    // Pero si es un bloque de "Late Check-Out" o un "Day Use", sí debe sumar en su respectiva fecha.
-                    if (fechaClave === fechaFinStr && !evt.extendedProps?.esExtra && evt.extendedProps?.medio !== 'Day use') {
-                        break; 
-                    }
+    if (fechaClave === fechaFinStr && !evt.extendedProps?.esExtra && evt.extendedProps?.medio !== 'Day use') {
+        if (fechaInicioStr !== fechaFinStr) {
+            break; 
+        }
+    }
 
-                    if (!conteoOcupacionPorDia[fechaClave]) {
-                        conteoOcupacionPorDia[fechaClave] = 0;
-                    }
-                    
-                    conteoOcupacionPorDia[fechaClave]++;
+    if (!conteoOcupacionPorDia[fechaClave]) {
+        conteoOcupacionPorDia[fechaClave] = 0;
+    }
+    
+    conteoOcupacionPorDia[fechaClave]++;
 
-                    // Avanzamos al siguiente día del bucle
-                    fechaIterada.setDate(fechaIterada.getDate() + 1);
-                }
+    // Avanzamos al siguiente día del bucle
+    fechaIterada.setDate(fechaIterada.getDate() + 1);
+}
             });
 
             // Mapeamos los totales calculados para que FullCalendar los pinte en la fila 'total-row'

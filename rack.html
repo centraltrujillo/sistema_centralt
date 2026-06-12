@@ -51,8 +51,8 @@
             <span class="close-modal" onclick="cerrarModal()">&times;</span>
         </div>
 
-        <form id="formNuevaReserva">
-            <div class="form-body-no-scroll">
+                <form id="formNuevaReserva" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
+
                 
                 <div class="form-section-title">DATOS DEL HUÉSPED</div>
                 <div class="form-grid-compact">
@@ -266,7 +266,7 @@
         <div class="modal-pms-header">
             <div class="header-title-wrapper" style="display: flex; align-items: center; gap: 12px;">
                 <i class="fa-solid fa-receipt header-icon"></i>
-                <div style="display: flex; align-items: right; gap: 10px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <h3 id="viewModalTitle" style="margin: 0;">Detalle de la Reserva</h3>
                     <span id="viewResEstado" class="badge-estado"></span>
                 </div>
@@ -281,31 +281,84 @@
                 <div class="section-card">
                     <h4><i class="fa-solid fa-user"></i> Información del Huésped</h4>
                     <div class="info-grid">
-                        <div class="full-width"><label>Nombre:</label> <span id="viewHuespedNombre" class="highlight-text">---</span></div>
-                        <div><label>Documento:</label> <span id="viewHuespedDoc">---</span></div>
-                        <div><label>Teléfono:</label> <span id="viewHuespedTel">---</span></div>
-                        <div class="full-width"><label>Correo:</label> <span id="viewHuespedCorreo" class="text-lowercase">---</span></div>
-                        <div><label>Nacionalidad:</label> <span id="viewHuespedNacio">---</span></div>
-                        <div><label>Ciudad de Proc.:</label> <span id="viewHuespedCiudad">---</span></div>
-                        <div class="full-width"><label>F. Nacimiento:</label> <span id="viewHuespedNacimiento">---</span></div>
-                        <div class="full-width"><label>Preferencias:</label> <span id="viewHuespedPref" class="text-italic-gray">---</span></div>
+                        <div class="full-width">
+                            <label>Nombre:</label> 
+                            <span id="viewHuespedNombre" class="highlight-text">---</span>
+                        </div>
+                        <div>
+                            <label>Documento:</label> 
+                            <span id="viewHuespedDoc">---</span>
+                        </div>
+                        <div>
+                            <label>Teléfono:</label> 
+                            <span id="viewHuespedTel">---</span>
+                        </div>
+                        <div class="full-width">
+                            <label>Correo:</label> 
+                            <span id="viewHuespedCorreo" class="text-lowercase">---</span>
+                        </div>
+                        <div>
+                            <label>Nacionalidad:</label> 
+                            <span id="viewHuespedNacio">---</span>
+                        </div>
+                        <div>
+                            <label>Ciudad de Proc.:</label> 
+                            <span id="viewHuespedCiudad">---</span>
+                        </div>
+                        <div class="full-width">
+                            <label>F. Nacimiento:</label> 
+                            <span id="viewHuespedNacimiento">---</span>
+                        </div>
+                        <div class="full-width">
+                            <label>Preferencias:</label> 
+                            <span id="viewHuespedPref" class="text-italic-gray">---</span>
+                        </div>
                     </div>
                 </div>
 
                 <div class="section-card">
                     <h4><i class="fa-solid fa-calendar-days"></i> Detalles de la Estancia</h4>
                     <div class="info-grid">
-                        <div><label>Habitación:</label> <span id="viewResHabitacion" class="room-badge">---</span></div>
-                        <div><label>Medio Reserva:</label> <span id="viewResMedio" class="media-badge">---</span></div>
-                        <div><label>Check-In:</label> <span id="viewResCheckIn" class="date-badge text-emerald">---</span></div>
-                        <div><label>Check-Out:</label> <span id="viewResCheckOut" class="date-badge text-wine">---</span></div>
-                        <div><label>Hora Early C-In:</label> <span id="viewResHoraEarly">---</span></div>
-                        <div><label>Hora Late C-Out:</label> <span id="viewResHoraLate">---</span></div>
-                        <div><label>Noches:</label> <span id="viewResNoches" class="numeric-focus">0</span></div>
-                        <div><label>Nro. Personas:</label> <span id="viewResPersonas">1</span></div>
-                        <div><label>¿Aplica Niños?</label> <span id="viewResAplicaNinos">No</span></div>
-                        <div><label>Info. Niños:</label> <span id="viewInformacionNinos">N/A</span></div>
-                    </div>
+                        <div>
+                            <label>Habitación:</label> 
+                            <span id="viewResHabitacion" class="room-badge">---</span>
+                        </div>
+                        <div>
+                            <label>Medio Reserva:</label> 
+                            <span id="viewResMedio" class="media-badge">---</span>
+                        </div>
+                        <div>
+                            <label>Check-In:</label> 
+                            <span id="viewResCheckIn" class="date-badge text-emerald">---</span>
+                        </div>
+                        <div>
+                            <label>Check-Out:</label> 
+                            <span id="viewResCheckOut" class="date-badge text-wine">---</span>
+                        </div>
+                        <div>
+                            <label>Hora Early C-In:</label> 
+                            <span id="viewResHoraEarly">---</span>
+                        </div>
+                        <div>
+                            <label>Hora Late C-Out:</label> 
+                            <span id="viewResHoraLate">---</span>
+                        </div>
+                        <div>
+                            <label>Noches:</label> 
+                            <span id="viewResNoches" class="numeric-focus">0</span>
+                        </div>
+                        <div>
+                            <label>Nro. Personas:</label> 
+                            <span id="viewResPersonas">1</span>
+                        </div>
+                        <div>
+                            <label>¿Aplica Niños?</label> 
+                            <span id="viewResAplicaNinos">No</span>
+                        </div>
+                        <div>
+                            <label>Info. Niños:</label> 
+                            <span id="viewInformacionNinos">N/A</span>
+                        </div>
                     </div>
                 </div>
 
@@ -328,23 +381,31 @@
 
                 <div class="section-card financial-summary">
                     <h4><i class="fa-solid fa-hand-holding-dollar"></i> Liquidación de Caja</h4>
+                    
                     <div class="financial-row">
                         <span class="fin-label">Tarifa Hospedaje (por noche):</span>
                         <span id="viewResTarifa" class="fin-val">---</span>
                     </div>
+                    
                     <div class="financial-row">
                         <span class="fin-label">Cargos Adicionales (Early / Late):</span>
                         <span id="viewResCargosExtras" class="fin-val text-muted">---</span>
                     </div>
+                    
                     <div class="financial-row">
                         <span class="fin-label text-muted">Tipo de Cambio Aplicado:</span>
                         <span id="viewResTipoCambio" class="fin-mono">---</span>
                     </div>
+                    
                     <div class="financial-row payment-highlight">
-                        <span class="fin-label text-emerald-dark"><i class="fa-solid fa-circle-check"></i> Adelanto Recibido (<span id="viewResMetodoText">---</span>):</span>
+                        <span class="fin-label text-emerald-dark">
+                            <i class="fa-solid fa-circle-check"></i> Adelanto Recibido (<span id="viewResMetodoText">---</span>):
+                        </span>
                         <div class="payment-val-block">
                             <span id="viewResAdelanto" class="text-emerald-dark font-bold">---</span>
-                            <span id="viewBlockOperacion" class="operation-tag hidden">Detalle: <span id="viewResNroOperacion">---</span></span>
+                            <span id="viewBlockOperacion" class="operation-tag hidden">
+                                Detalle: <span id="viewResNroOperacion">---</span>
+                            </span>
                         </div>
                     </div>
                     
@@ -370,7 +431,9 @@
                 <i class="fa-solid fa-pen-to-square"></i> Editar Datos de Reserva
             </button>
         </div>
+        
     </div>
+</div>
 </div>
 
         </div> </div> <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
