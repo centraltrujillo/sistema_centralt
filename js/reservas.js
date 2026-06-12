@@ -175,13 +175,15 @@ window.calcularMontos = () => {
         return;
     }
 
-    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
+    // Permite el mismo día libremente
+const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
 
-    if (noches < 0 || (noches === 0 && !tieneEarly && !tieneLate)) {
-        inputTotal.value = "0.00";
-        inputDiferencia.value = "0.00";
-        return;
-    }
+// Ahora solo frena si las noches son negativas (error de fechas)
+if (noches < 0) {
+    inputTotal.value = "0.00";
+    inputDiferencia.value = "0.00";
+    return;
+}
     
     // 🔥 A. Conversión inmediata a Soles para unificar la moneda antes de los recargos
     let tarifaEnSoles = tarifaOrigen;

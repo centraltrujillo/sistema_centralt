@@ -4,7 +4,6 @@ let calendar;
 let listaHabitacionesGlobal = [];
 let editId = null; 
 
-
 // --- REFERENCIAS AL DOM ---
 const form = document.getElementById("formNuevaReserva");
 const modal = document.getElementById("modalReserva");
@@ -28,6 +27,10 @@ const checkLate = document.getElementById("resAplicaLate");
 const selectMetodoPago = document.getElementById("resMetodoPago");
 const inputAdelantoDetalle = document.getElementById("resAdelantoDetalle");
 
+// NUEVAS REFERENCIAS: Sección Niños
+const checkAplicaNinos = document.getElementById("resAplicaNinos");
+const inputInformacionNinos = document.getElementById("resInformacionNinos");
+
 
 // --- ASIGNACIÓN DE LISTENERS SEGUROS ---
 if (btnAbrirModal) {
@@ -40,7 +43,7 @@ if (btnAbrirModal) {
         
         if (inputTotal) inputTotal.value = "0.00";
         if (inputDiferencia) inputDiferencia.value = "0.00";
-        if (inputTipoCambio) inputTipoCambio.value = "1.000"; 
+        if (inputTipoCambio) inputTipoCambio.value = "1.00"; 
         
         if (checkEarly) checkEarly.checked = false;
         if (checkLate) checkLate.checked = false;
@@ -182,10 +185,36 @@ const Toast = typeof Swal !== 'undefined' ? Swal.mixin({
 
 
 // ==========================================================================
-// --- 2. AUTOCOMPLETADO POR DOCUMENTO (Supabase) ---
+// --- 2. AUTOCOMPLETADO POR NOMBRE O DOCUMENTO ---
 // ==========================================================================
 const inputDoc = document.getElementById("resDoc");
+const inputHuespedNombre = document.getElementById("resHuesped"); // Tu input de Nombres y Apellidos
 
+const datalistHuespedes = document.getElementById("listaHuespedesSugeridos");
+
+const rellenarCamposHuesped = (h) => {
+    if (form) form.dataset.idHuesped = h.id;
+
+    if (document.getElementById("resHuesped")) document.getElementById("resHuesped").value = h.nombres_apellidos || "";
+    if (document.getElementById("resDoc")) document.getElementById("resDoc").value = h.documento_num || "";
+    if (document.getElementById("resTipoDoc") && h.documento_tipo) document.getElementById("resTipoDoc").value = h.documento_tipo;
+    if (document.getElementById("resTelefono")) document.getElementById("resTelefono").value = h.telefono || "";
+    if (document.getElementById("resCorreo")) document.getElementById("resCorreo").value = h.correo || "";
+    if (document.getElementById("resNacionalidad")) document.getElementById("resNacionalidad").value = h.nacionalidad || "Peruana";
+    if (document.getElementById("resNacimiento")) document.getElementById("resNacimiento").value = h.fecha_nacimiento || ""; 
+    if (document.getElementById("resCiudad")) document.getElementById("resCiudad").value = h.ciudad || ""; 
+    if (document.getElementById("resPreferencia")) document.getElementById("resPreferencia").value = h.preferencias || ""; 
+
+    if (typeof Toast !== 'undefined' && Toast) {
+        Toast.fire({
+            icon: 'success',
+            title: 'Huésped encontrado en el sistema',
+            background: '#f0fdf4' 
+        });
+    }
+};
+
+// A. Búsqueda por Documento 
 if (inputDoc) {
     inputDoc.addEventListener("blur", async (e) => {
         const docNum = e.target.value.trim();
@@ -200,108 +229,174 @@ if (inputDoc) {
             if (error) throw error;
 
             if (huespedes && huespedes.length > 0) {
-                const h = huespedes[0];
-
-                if (form) form.dataset.idHuesped = h.id;
-                const inputHiddenId = document.getElementById('resHuespedId');
-                if (inputHiddenId) inputHiddenId.value = h.id;
-
-                if (document.getElementById("resHuesped")) document.getElementById("resHuesped").value = h.nombres_apellidos || "";
-                if (document.getElementById("resTelefono")) document.getElementById("resTelefono").value = h.telefono || "";
-                if (document.getElementById("resCorreo")) document.getElementById("resCorreo").value = h.correo || "";
-                if (document.getElementById("resNacionalidad")) document.getElementById("resNacionalidad").value = h.nacionalidad || "Peruana";
-                if (document.getElementById("resNacimiento")) document.getElementById("resNacimiento").value = h.fecha_nacimiento || ""; 
-                if (document.getElementById("resCiudad")) document.getElementById("resCiudad").value = h.ciudad || ""; 
-                if (document.getElementById("resPreferencia")) document.getElementById("resPreferencia").value = h.preferencias || ""; 
-                
-                if (document.getElementById("resTipoDoc") && h.documento_tipo) {
-                    document.getElementById("resTipoDoc").value = h.documento_tipo;
-                }
-
-                if (Toast) {
-                    Toast.fire({
-                        icon: 'success',
-                        title: 'Huésped encontrado en el sistema',
-                        background: '#f0fdf4' 
-                    });
-                }
+                rellenarCamposHuesped(huespedes[0]);
             } else {
                 if (form) delete form.dataset.idHuesped;
-                const inputHiddenId = document.getElementById('resHuespedId');
-                if (inputHiddenId) inputHiddenId.value = "";
             }
         } catch (error) {
-            console.error("Error al buscar huésped:", error.message || error);
+            console.error("Error al buscar huésped por documento:", error.message || error);
         }
     });
 }
 
+// 🔄Búsqueda dinámica con Lista de Sugerencias 
+if (inputHuespedNombre && datalistHuespedes) {
+    // Vinculamos el input de texto con el contenedor de opciones
+    inputHuespedNombre.setAttribute("list", "listaHuespedesSugeridos");
 
-// ==========================================================================
-// --- 3. LÓGICA DE NEGOCIO AVANZADA (Recargos, Moneda y Validación) ---
-// ==========================================================================
-window.calcularMontos = () => {
-    if (!inputCheckIn || !inputCheckOut || !inputTarifa || !inputTotal || !inputDiferencia || !inputAdelantoMonto) return;
-
-    const fIn = new Date(inputCheckIn.value + 'T00:00:00');
-    const fOut = new Date(inputCheckOut.value + 'T00:00:00');
-    const tarifaBase = parseFloat(inputTarifa.value) || 0;
-
-    const tieneEarly = checkEarly ? checkEarly.checked : false;
-    const tieneLate = checkLate ? checkLate.checked : false;
-
-    // Capturamos los elementos de moneda y tipo de cambio
-    const moneda = selectMoneda?.value || "PEN";
-    const tipoCambio = parseFloat(inputTipoCambio?.value) || 1.000;
-
-    if (!inputCheckIn.value || !inputCheckOut.value) {
-        inputTotal.value = "0.00";
-        inputDiferencia.value = "0.00";
-        return;
-    }
-
-    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
-
-    if (noches < 0 || (noches === 0 && !tieneEarly && !tieneLate)) {
-        inputTotal.value = "0.00";
-        inputDiferencia.value = "0.00";
-        return;
-    }
-    
-    // 1. Cálculos base en la moneda pactada
-    let subtotalHospedaje = noches === 0 ? tarifaBase : noches * tarifaBase;
-    let cargoEarly = tieneEarly ? (tarifaBase * 0.5) : 0.00;
-    let cargoLate = tieneLate ? (tarifaBase * 0.5) : 0.00;
-
-    let totalReservaMismaMoneda = subtotalHospedaje + cargoEarly + cargoLate;
-
-    // 2. 🎯 CONVERSIÓN CRÍTICA: Si es USD, convertimos el total final a soles
-    let totalFinalMostrado = totalReservaMismaMoneda;
-    if (moneda === "USD") {
-        totalFinalMostrado = totalReservaMismaMoneda * tipoCambio;
-    }
-
-    if (form) {
-        form.dataset.cargoEarly = cargoEarly;
-        form.dataset.cargoLate = cargoLate;
-    }
-
-    // El total mostrado en la interfaz ahora sí reflejará soles si se seleccionó USD
-    inputTotal.value = totalFinalMostrado.toFixed(2);
-
-    let adelanto = parseFloat(inputAdelantoMonto.value) || 0;
-
-    // El adelanto se evalúa contra el total final convertido
-    if (adelanto > totalFinalMostrado && totalFinalMostrado > 0) {
-        adelanto = totalFinalMostrado;
-        inputAdelantoMonto.value = totalFinalMostrado.toFixed(2);
+    // Evento 'input': Se ejecuta cada vez que el usuario escribe una letra
+    inputHuespedNombre.addEventListener("input", async (e) => {
+        const nombreBusqueda = e.target.value.trim();
         
-        if (Toast) {
-            Toast.fire({ icon: 'warning', title: 'El adelanto no puede superar al total' });
+        // Limpiamos las opciones previas para que no se acumulen
+        datalistHuespedes.innerHTML = "";
+
+        // Si ya se buscó por DNI o el texto es muy corto, no consultamos a Supabase
+        if (nombreBusqueda.length < 4 || (form && form.dataset.idHuesped)) return;
+
+        try {
+            // Buscamos coincidencias parciales sin el .limit(1) para poder ver los homónimos
+            const { data: huespedes, error } = await supabase
+                .from("huespedes")
+                .select("id, nombres_apellidos, documento_num, documento_tipo")
+                .ilike("nombres_apellidos", `%${nombreBusqueda}%`)
+                .limit(5); // Traemos hasta un máximo de 5 sugerencias
+
+            if (error) throw error;
+
+            if (huespedes && huespedes.length > 0) {
+                huespedes.forEach(h => {
+                    const option = document.createElement("option");
+                    // El valor que se inyectará en el input al hacer clic
+                    option.value = h.nombres_apellidos; 
+                    // Texto secundario que ayuda a la recepcionista a diferenciar (ej: DNI: 75095174)
+                    option.textContent = `${h.documento_tipo}: ${h.documento_num}`; 
+                    
+                    datalistHuespedes.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error("Error en sugerencias de nombres:", error.message || error);
+        }
+    });
+
+    // Evento 'change': Se ejecuta cuando la recepcionista hace clic en una opción de la lista
+    inputHuespedNombre.addEventListener("change", async (e) => {
+        const nombreSeleccionado = e.target.value.trim();
+        if (!nombreSeleccionado) return;
+        
+        try {
+            // Traemos todos los datos del huésped seleccionado de la base de datos
+            const { data: huespedes, error } = await supabase
+                .from("huespedes")
+                .select("*")
+                .eq("nombres_apellidos", nombreSeleccionado);
+
+            if (error) throw error;
+
+            if (huespedes && huespedes.length > 0) {
+                // Si hay homónimos idénticos en nombre, por defecto tomará el primero.
+                rellenarCamposHuesped(huespedes[0]);
+            }
+        } catch (error) {
+            console.error("Error al cargar datos del huésped seleccionado:", error.message || error);
+        }
+    });
+}
+
+// ==========================================================================
+// --- 3. LÓGICA DE NEGOCIO  ---
+// ==========================================================================
+window.calcularMontosNuevoModulo = () => {
+    
+    const nInputCheckIn     = inputCheckIn;       // Tu nuevo input de entrada
+    const nInputCheckOut    = inputCheckOut;      // Tu nuevo input de salida
+    const nInputTarifa      = inputTarifa;        // Tu nuevo input de tarifa base
+    const nInputTotal       = inputTotal;         // Tu nuevo input de total final
+    const nInputDiferencia  = inputDiferencia;    // Tu nuevo input de saldo/diferencia
+    const nInputAdelanto    = inputAdelantoMonto; // Tu nuevo input de adelanto
+    const nCheckEarly       = checkEarly;         // Tu nuevo checkbox Early
+    const nCheckLate        = checkLate;          // Tu nuevo checkbox Late
+    const nSelectMoneda     = selectMoneda;       // Tu nuevo select de moneda
+    const nInputTipoCambio  = inputTipoCambio;    // Tu nuevo input de tipo de cambio
+    const nForm             = form;               // Tu nuevo contenedor/formulario (opcional)
+
+    // Validación de existencia de elementos esenciales
+    if (!nInputCheckIn || !nInputCheckOut || !nInputTarifa || !nInputTotal || !nInputDiferencia || !nInputAdelanto) return;
+
+    // Captura de valores de fecha y tarifa
+    const fIn = new Date(nInputCheckIn.value + 'T00:00:00');
+    const fOut = new Date(nInputCheckOut.value + 'T00:00:00');
+    const tarifaBase = parseFloat(nInputTarifa.value) || 0;
+
+    const tieneEarly = nCheckEarly ? nCheckEarly.checked : false;
+    const tieneLate = nCheckLate ? nCheckLate.checked : false;
+
+    const moneda = nSelectMoneda?.value || "PEN";
+    let tc = 3.75; 
+    if (nInputTipoCambio && nInputTipoCambio.value.trim() !== "") {
+        const tcParseado = parseFloat(nInputTipoCambio.value);
+        if (!isNaN(tcParseado) && tcParseado > 0) {
+            tc = tcParseado; 
         }
     }
 
-    inputDiferencia.value = (totalFinalMostrado - adelanto).toFixed(2);
+    // Si las fechas están vacías, resetea la pantalla
+    if (!nInputCheckIn.value || !nInputCheckOut.value) {
+        nInputTotal.value = "0.00";
+        nInputDiferencia.value = "0.00";
+        return;
+    }
+
+    // Cálculo de noches
+    const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
+
+    // Si es 0 noches, continuará para permitir el "Day Use"
+    if (noches < 0) {
+        nInputTotal.value = "0.00";
+        nInputDiferencia.value = "0.00";
+        return;
+    }
+    
+    // 🔥 A. Conversión inmediata de la tarifa base a Soles si está en USD
+    let tarifaEnSoles = tarifaBase;
+    if (moneda === "USD") {
+        tarifaEnSoles = tarifaBase * tc; 
+    }
+
+    // B. Cálculos base unificados en Soles (Soporta Day Use si noches es 0 cobrando 1 noche)
+    let subtotalHospedajeSoles = noches === 0 ? tarifaEnSoles : noches * tarifaEnSoles; 
+    let cargoEarlySoles = tieneEarly ? (tarifaEnSoles * 0.5) : 0.00;
+    let cargoLateSoles = tieneLate ? (tarifaEnSoles * 0.5) : 0.00;
+
+    let totalBrutoSoles = subtotalHospedajeSoles + cargoEarlySoles + cargoLateSoles;
+
+    // 🌟 C. Redondeo estricto hacia arriba (Ej: 90.15 -> 91.00)
+    let totalFinalSoles = Math.ceil(totalBrutoSoles);
+
+    // Guardar los cargos calculados en el dataset del formulario
+    if (nForm) {
+        nForm.dataset.cargoEarly = cargoEarlySoles.toFixed(2);
+        nForm.dataset.cargoLate = cargoLateSoles.toFixed(2);
+    }
+
+    // Pintamos el total final en Soles ajustado en la pantalla
+    nInputTotal.value = totalFinalSoles.toFixed(2);
+
+    let adelanto = parseFloat(nInputAdelanto.value) || 0;
+
+    // El guardarraíl del adelanto se evalúa contra el total final redondeado en soles
+    if (adelanto > totalFinalSoles && totalFinalSoles > 0) {
+        adelanto = totalFinalSoles;
+        nInputAdelanto.value = totalFinalSoles.toFixed(2);
+        
+        if (typeof Toast !== 'undefined') {
+            Toast.fire({ icon: 'warning', title: 'El adelanto no puede superar al total en soles' });
+        }
+    }
+
+    // Cálculo final de la diferencia/saldo restante
+    nInputDiferencia.value = (totalFinalSoles - adelanto).toFixed(2);
 };
 
 function configurarEventosFormulario() {
@@ -434,6 +529,9 @@ if (horaPeru >= 7 && horaPeru < 14) {
             moneda: monedaSeleccionada, 
             tipo_cambio: tipoChangeUsado,
             nuevo_huesped_datos: datosHuespedNuevo,
+            tiene_ninos: aplicaNinos,              
+            informacion_ninos: informacionNinos     
+
         };
 
         const selectMetodoDOM = document.getElementById("resMetodoPago");
@@ -834,6 +932,8 @@ window.mostrarFichaReserva = async function(idReserva, esClickReal = false) {
         const noches = Math.round((f2 - f1) / (1000 * 60 * 60 * 24)) || 0;
         document.getElementById("viewResNoches").textContent = noches;
         document.getElementById("viewResPersonas").textContent = reserva.numero_personas || "1";
+        document.getElementById("viewAplicaNinos").textContent = reserva.tiene_ninos ? "Sí" : "No";
+        document.getElementById("viewInformacionNinos").textContent = reserva.informacion_ninos || "N/A";
 
         // 3. Servicios Adicionales
         document.getElementById("viewResDesayuno").textContent = reserva.desayuno ? "Sí" : "No";
@@ -1522,6 +1622,8 @@ window.prepararEdicion = async (id) => {
         if (document.getElementById("resCheckOut")) document.getElementById("resCheckOut").value = res.check_out_fecha || "";
         if (document.getElementById("resEstado")) document.getElementById("resEstado").value = res.estado_reserva || "Confirmada";
         if (document.getElementById("resNumPersonas")) document.getElementById("resNumPersonas").value = res.numero_personas || "1";
+        if (document.getElementById("resAplcaNiños")) document.getElementById("resAplcaNiños").checked = res.aplica_ninos || false;
+        if (document.getElementById("resInformacionNinos")) document.getElementById("resInformacionNinos").value = res.informacion_ninos || "";
         
         // Extras y Tiempos
         if (document.getElementById("resEarlyHora")) document.getElementById("resEarlyHora").value = res.check_in_hora || "";
@@ -1652,6 +1754,8 @@ window.mostrarFichaReserva = async function(idReserva) {
         if (document.getElementById("viewResHoraEarly")) document.getElementById("viewResHoraEarly").textContent = res.tiene_early_checkin ? (res.check_in_hora || "Sí (Sin hora)") : "No aplica";
         if (document.getElementById("viewResHoraLate")) document.getElementById("viewResHoraLate").textContent = res.tiene_late_checkout ? (res.check_out_hora || "Sí (Sin hora)") : "No aplica";
         if (document.getElementById("viewResPersonas")) document.getElementById("viewResPersonas").textContent = res.numero_personas || "1";
+        if (document.getElementById("viewResAplicaNinos")) document.getElementById("viewResAplicaNinos").textContent = res.aplica_ninos ? "Sí" : "No";
+        if (document.getElementById("viewInformacionNinos")) document.getElementById("viewInformacionNinos").textContent = res.informacion_ninos || "N/A";
         
         const badgeEst = document.getElementById("viewResEstado");
 if (badgeEst) {
