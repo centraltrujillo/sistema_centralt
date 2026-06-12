@@ -60,6 +60,7 @@
 
 <div id="modalReserva" class="modal-reserva-overlay">
     <div class="modal-reserva-content">
+        
         <div class="modal-reserva-header">
             <h3 id="modalTitle">Nueva Reserva</h3>
             <span class="close-modal" onclick="cerrarModal()">&times;</span>
@@ -67,7 +68,7 @@
 
         <form id="formNuevaReserva" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden;">
             
-            <div class="form-body-no-scroll">
+            <div style="flex-grow: 1; overflow-y: auto; padding-right: 5px;">
                 
                 <div class="form-section-title">DATOS DEL HUÉSPED</div>
                 <div class="form-grid-compact">
@@ -76,40 +77,49 @@
                     <div class="form-group span-2">
                         <label>Nombres y Apellidos</label>
                         <input type="text" id="resHuesped" required placeholder="Nombre completo">
+                        <datalist id="listaHuespedesSugeridos"></datalist>
                     </div>
+                    
                     <div class="form-group">
                         <label>Tipo Doc.</label>
-                        <select id="resTipoDoc" required>
+                        <select id="resTipoDoc">
                             <option value="DNI">DNI</option>
                             <option value="Pasaporte">Pasaporte</option>
                             <option value="CE">C.E.</option>
                             <option value="RUC">RUC</option>
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label>Nro. Documento</label>
-                        <input type="text" id="resDoc" required placeholder="Ej: 74589632">
+                        <input type="text" id="resDoc">
                     </div>
+                    
                     <div class="form-group">
-                        <label>Telefono</label>
-                        <input type="tel" id="resTelefono" required placeholder="999 999 999">
+                        <label>Teléfono</label>
+                        <input type="tel" id="resTelefono">
                     </div>
+                    
                     <div class="form-group">
                         <label>Nacionalidad</label>
                         <input type="text" id="resNacionalidad" value="Peruana">
                     </div>
+                    
                     <div class="form-group">
                         <label>Ciudad</label>
-                        <input type="text" id="resCiudad" placeholder="Lima">
+                        <input type="text" id="resCiudad" placeholder="Ciudad de residencia">
                     </div>
+                    
                     <div class="form-group">
                         <label>Nacimiento</label>
                         <input type="date" id="resNacimiento">
                     </div>
+                    
                     <div class="form-group span-2">
                         <label>Correo Electrónico</label>
                         <input type="email" id="resCorreo" placeholder="correo@ejemplo.com">
                     </div>
+                    
                     <div class="form-group span-2">
                         <label>Preferencias</label>
                         <input type="text" id="resPreferencia" placeholder="habitación favorita, allergies, etc.">
@@ -122,14 +132,17 @@
                         <label>Habitación</label>
                         <select id="resHabitacion" required></select>
                     </div>
+                    
                     <div class="form-group">
                         <label>Check In</label>
                         <input type="date" id="resCheckIn" required>
                     </div>
+                    
                     <div class="form-group">
                         <label>Check Out</label>
                         <input type="date" id="resCheckOut" required>
                     </div>
+                    
                     <div class="form-group">
                         <label>Medio Reserva</label>
                         <select id="resMedio" required>
@@ -146,12 +159,13 @@
                         </select>
                     </div>
 
-                    <div id="statusDisponibilidad" class="status-badge span-3"></div>
+                    <div id="statusDisponibilidad" class="status-badge span-4"></div>
 
                     <div class="form-group">
                         <label>N° Personas</label>
                         <input type="number" id="resNumPersonas" min="1" value="1">
                     </div>
+                    
                     <div class="form-group">
                         <label>Desayuno</label>
                         <select id="resInfo">
@@ -159,10 +173,12 @@
                             <option value="false">SIN DESAYUNO</option>
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label>Hora Ingreso</label>
                         <input type="time" id="resEarlyHora">
                     </div>
+                    
                     <div class="form-group">
                         <label>Hora Salida</label>
                         <input type="time" id="resLateHora">
@@ -176,10 +192,12 @@
                             <option value="Santa Mónica">Santa Mónica</option>
                         </select>
                     </div>
+                    
                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px;">
                         <label for="resAplicaEarly" style="margin: 0; cursor: pointer; font-weight: bold; font-size: 12px;">¿Aplica Early Check-In?</label>
                         <input type="checkbox" id="resAplicaEarly" style="width: 20px; height: 20px; cursor: pointer;">
                     </div>
+                    
                     <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px;">
                         <label for="resAplicaLate" style="margin: 0; cursor: pointer; font-weight: bold; font-size: 12px;">¿Aplica Late Check-Out?</label>
                         <input type="checkbox" id="resAplicaLate" style="width: 20px; height: 20px; cursor: pointer;">
@@ -196,9 +214,19 @@
                         </select>
                     </div>
 
-                    <div class="form-group span-4">
+                    <div class="form-group">
                         <label>Traslado Logístico</label>
                         <input type="text" id="resTraslado" placeholder="Detalles del vuelo o transporte">
+                    </div>
+
+                    <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px;">
+                        <label for="resAplicaNinos" style="margin: 0; cursor: pointer; font-weight: bold; font-size: 12px;">¿Tiene Niños?</label>
+                        <input type="checkbox" id="resAplicaNinos" style="width: 20px; height: 20px; cursor: pointer;">
+                    </div>
+                    
+                    <div class="form-group span-2">
+                        <label>Información de los Niños</label>
+                        <input type="text" id="resInformacionNinos" placeholder="Detalles de los niños">
                     </div>
                 </div>
 
@@ -206,8 +234,9 @@
                 <div class="form-grid-compact highlight-section">
                     <div class="form-group">
                         <label>Tarifa por Noche</label>
-                        <input type="number" id="resTarifa" step="0.01" required placeholder="0.00">
+                        <input type="number" id="resTarifa" step="0.01" placeholder="0.00">
                     </div>
+                    
                     <div class="form-group">
                         <label>Moneda</label>
                         <select id="resMoneda">
@@ -215,19 +244,22 @@
                             <option value="USD">Dólares ($)</option>
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label>T. Cambio</label>
-                        <input type="number" id="resTipoCambio" step="0.001" placeholder="3.50">
+                        <input type="number" id="resTipoCambio" step="0.01">
                     </div>
+                    
                     <div class="form-group">
                         <label>Total Estancia</label>
-                        <input type="number" id="resTotal" class="input-total" step="0.01" readonly value="0.00">
+                        <input type="number" id="resTotal" class="input-total" step="0.01" value="0.00">
                     </div>
 
                     <div class="form-group">
                         <label>Adelanto (Abono)</label>
                         <input type="number" id="resAdelantoMonto" class="input-adelanto" step="0.01" value="0.00">
                     </div>
+                    
                     <div class="form-group">
                         <label>Método de Pago</label>
                         <select id="resMetodoPago">
@@ -237,28 +269,22 @@
                             <option value="Tarjeta">Tarjeta</option>
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label>Monto Pendiente</label>
                         <input type="number" id="resDiferencia" class="input-diferencia" step="0.01" readonly value="0.00">
                     </div>
+                    
                     <div class="form-group">
-                        <label>Nro. Operación / Nota</label>
-                        <input type="text" id="resAdelantoDetalle" placeholder="Ej: Yape 154823">
+                        <label>Detalle del Adelanto</label>
+                        <input type="text" id="resAdelantoDetalle" placeholder="Nro de operación o transferencia">
                     </div>
                 </div>
 
                 <div class="form-grid-compact" style="margin-top: 10px;">
-                    <div class="form-group span-2">
+                    <div class="form-group span-4">
                         <label>Observaciones</label>
-                        <input type="text" id="resObservaciones">
-                    </div>
-                    <div class="form-group">
-                        <label>Recibido por</label>
-                        <input type="text" id="resRecepcion">
-                    </div>
-                    <div class="form-group">
-                        <label>Confirmado por</label>
-                        <input type="text" id="resRecepcionconfi">
+                        <input type="text" id="resObservaciones" placeholder="Comentarios adicionales sobre la reserva">
                     </div>
                 </div>
             </div>
@@ -266,9 +292,11 @@
             <div class="form-actions-res">
                 <button type="submit" class="btn-save">Ingresar a la Habitación</button>
             </div>
+            
         </form>
     </div>
 </div>
+
     <script src="js/config.js" type="module"></script>
     <script type="module" src="js/auth-check.js"></script>
     <script type="module" src="js/habitaciones.js"></script>

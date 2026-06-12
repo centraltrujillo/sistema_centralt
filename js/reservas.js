@@ -712,47 +712,62 @@ const escucharReservas = async () => {
             
             // 🔄 FILA HTML ACTUALIZADA: Se añadió la sección de niños en la primera celda
             tr.innerHTML = `
-                <td class="p-3">
-                    <div class="font-bold text-gray-800">${res.huespedes?.nombres_apellidos || 'Sin Nombre'}</div>
-                    <div class="text-xs text-gray-400">${res.huespedes?.documento_num || '---'}</div>
-                
-                </td>
-                <td class="p-3 text-gray-600 text-sm">
-                    ${res.created_at ? new Date(res.created_at).toLocaleDateString('es-PE') : '---'}
-                </td>
-                <td class="p-3">
-                    <span class="font-semibold text-gray-700">Hab. ${res.habitaciones?.numero || '??'}</span><br>
-                    <small class="text-xs text-gray-400">${res.habitaciones?.tipo || ''}</small>
-                </td>
-                <td class="p-3 text-sm text-gray-600 text-center">
-                    ${res.check_in_fecha ? new Date(res.check_in_fecha + 'T12:00:00').toLocaleDateString('es-PE') : '---'}
-                </td>
-                <td class="p-3 text-sm text-gray-600 text-center">
-                    ${res.check_out_fecha ? new Date(res.check_out_fecha + 'T12:00:00').toLocaleDateString('es-PE') : '---'}
-                </td>
-                <td class="p-3 text-sm text-gray-600 text-center">${res.numero_personas || '1'}
+        <td class="p-3">
+            <div class="font-bold text-gray-800">${res.huespedes?.nombres_apellidos || 'Sin Nombre'}</div>
+            <div class="text-xs text-gray-400">${res.huespedes?.documento_num || '---'}</div>
+        </td>
+        
+        <td class="p-3 text-gray-600 text-sm">
+            ${res.created_at ? new Date(res.created_at).toLocaleDateString('es-PE') : '---'}
+        </td>
+        
+        <td class="p-3">
+            <span class="font-semibold text-gray-700">Hab. ${res.habitaciones?.numero || '??'}</span><br>
+            <small class="text-xs text-gray-400">${res.habitaciones?.tipo || ''}</small>
+        </td>
+        
+        <td class="p-3 text-sm text-gray-600 text-center">
+            ${res.check_in_fecha ? new Date(res.check_in_fecha + 'T12:00:00').toLocaleDateString('es-PE') : '---'}
+        </td>
+        
+        <td class="p-3 text-sm text-gray-600 text-center">
+            ${res.check_out_fecha ? new Date(res.check_out_fecha + 'T12:00:00').toLocaleDateString('es-PE') : '---'}
+        </td>
+        
+        <td class="p-3 text-sm text-gray-600 text-center">
+            <div class="flex flex-col items-center justify-center">
+                <span>${res.numero_personas || '1'}</span>
                 ${detallesNiños ? `
-                        <div class="mt-1 flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 w-max font-medium" title="${detallesNiños}">
-                            <i class="fa-solid fa-child text-xs"></i> <span>${detallesNiños}</span>
-                        </div>
-                    ` : ''}
-                </td>
-                <td class="p-3 font-semibold text-gray-800 text-right">
-                    ${simboloMoneda} ${totalMostrar.toFixed(2)}<br>
-                    <small class="text-xs text-gray-400 font-normal">
-                        (${noches} ${noches === 1 ? 'noche' : 'noches'} x ${simboloMoneda}${tarifaPorNoche.toFixed(2)})
-                        ${totalCargosExtras > 0 ? `<br><span class="text-emerald-600 font-medium">+ ${simboloMoneda}${totalCargosExtras.toFixed(2)} Extras</span>` : ''}
-                    </small>
-                </td>
-                <td class="p-3 text-center">
-                    <span class="badge-medio type-${medioLimpio}">${medioOriginal}</span>
-                </td>
-                <td class="p-3 text-center">
-                    <div class="flex justify-center gap-2 actions">
-                        <button type="button" class="btn-edit" onclick="prepararEdicion('${res.id}')" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                        <button type="button" class="btn-delete" onclick="eliminarReserva('${res.id}')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+                    <div class="mt-1 flex items-center gap-1 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 w-max font-medium" title="${detallesNiños}">
+                        <i class="fa-solid fa-child text-xs"></i> <span>${detallesNiños}</span>
                     </div>
-                </td>`;
+                ` : ''}
+            </div>
+        </td>
+        
+        <td class="p-3 font-semibold text-gray-800 text-right">
+            ${simboloMoneda} ${totalMostrar.toFixed(2)}<br>
+            <small class="text-xs text-gray-400 font-normal">
+                (${noches} ${noches === 1 ? 'noche' : 'noches'} x ${simboloMoneda}${tarifaPorNoche.toFixed(2)})
+                ${totalCargosExtras > 0 ? `<br><span class="text-emerald-600 font-medium">+ ${simboloMoneda}${totalCargosExtras.toFixed(2)} Extras</span>` : ''}
+            </small>
+        </td>
+        
+        <td class="p-3 text-center">
+            <span class="badge-medio type-${medioLimpio}">${medioOriginal}</span>
+        </td>
+        
+        <td class="p-3 text-center">
+            <div class="flex justify-center gap-2 actions">
+                <button type="button" class="btn-edit" onclick="prepararEdicion('${res.id}')" title="Editar">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button type="button" class="btn-delete" onclick="eliminarReserva('${res.id}')" title="Eliminar">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </td>
+    `;
             tablaBodyReal.appendChild(tr);
         });
 
