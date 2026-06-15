@@ -143,8 +143,7 @@ if (inputTipoChange) {
     inputTipoChange.addEventListener("change", () => window.calcularMontos());
 }
 if (checkEarly) checkEarly.addEventListener("change", () => window.calcularMontos());
-if (checkLate) checkLate.checked = true && checkLate.addEventListener("change", () => window.calcularMontos());
-
+if (checkLate) checkLate.addEventListener("change", () => window.calcularMontos());
 
 // --- 2. LÓGICA DE CÁLCULOS (Conversión Booking USD a Soles, Saldos y Redondeo - ACTUALIZADO) ---
 window.calcularMontos = () => {
@@ -909,7 +908,7 @@ window.prepararEdicion = async (id) => {
         if (document.getElementById("resAplicaLate")) document.getElementById("resAplicaLate").checked = res.tiene_late_checkout || false;
 
         // Configuración de Niños
-        if (document.getElementById("resAplicaNinos")) document.getElementById("resAplicaNinos").checked = res.aplica_ninos || false;
+        if (document.getElementById("resAplicaNinos")) document.getElementById("resAplicaNinos").checked = res.tiene_ninos || false;
         if (document.getElementById("resInformacionNinos")) document.getElementById("resInformacionNinos").value = res.informacion_ninos || "";
 
         // Tarifas y Moneda
