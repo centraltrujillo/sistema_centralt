@@ -507,7 +507,7 @@ function configurarEventosFormulario() {
                 desayuno: document.getElementById("resInfo")?.value === "true",
                 cochera: document.getElementById("resCochera")?.value || "No",
                 traslado: document.getElementById("resTraslado")?.value || "",
-                notes: document.getElementById("resObservaciones")?.value || "", 
+                notas: document.getElementById("resObservaciones")?.value || "", 
                 tiene_early_checkin: checkEarly?.checked || false,
                 tiene_late_checkout: checkLate?.checked || false,
                 tarifa_pactada: parseFloat(inputTarifa?.value) || 0, 
@@ -900,7 +900,7 @@ window.mostrarFichaReserva = async function(idReserva, esClickReal = false) {
         document.getElementById("viewResDesayuno").textContent = reserva.desayuno ? "Sí" : "No";
         document.getElementById("viewResCochera").textContent = reserva.cochera || "No";
         document.getElementById("viewResTraslado").textContent = reserva.traslado || "No";
-        document.getElementById("viewResNotas").textContent = reserva.notes || "Ninguna";
+        document.getElementById("viewResNotas").textContent = reserva.notas || "Ninguna";
 
         // 4. Bloque Financiero Profesional Cruzado Seguro
         const simbolo = reserva.moneda === "USD" ? "$" : "S/";
