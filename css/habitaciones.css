@@ -167,11 +167,11 @@ body {
 
 /* Diferenciación visual clara para OCUPADA */
 .hab-card.ocupada {
-    border-bottom: 5px solid var(--vino-tinto);
+    border-bottom: 5px solid var(--success-green);
 }
 
 .hab-card.ocupada:hover {
-    border-bottom-color: var(--rojo-vibrante);
+    border-bottom-color: var(--marron-zocalo);
 }
 
 /* 🔥 NUEVO: Diferenciación visual clara para LIMPIEZA */
@@ -196,7 +196,7 @@ body {
 
 /* Si quieres que la cabecera también cambie en ocupadas */
 .hab-card.ocupada .hab-header {
-    background: #2c3e50; /* Un tono más profundo o incluso un gris casi negro */
+    background: var(--success-green);
 }
 
 /* 🔥 NUEVO: Cabecera personalizada para LIMPIEZA */
@@ -240,7 +240,7 @@ body {
 }
 
 .hab-card.ocupada .hab-icon { 
-    color: var(--marron-zocalo); 
+    color: var(--success-green); 
 }
 
 /* 🔥 NUEVO: Color del icono para LIMPIEZA (La escoba) */
@@ -265,8 +265,8 @@ body {
 /* Cambio de color del badge según estado */
 .hab-card.ocupada .hab-badge {
     background: #fff1f2;
-    color: var(--vino-tinto);
-    border-color: var(--vino-tinto);
+    color: var(--success-green);
+    border-color: var(--marron-zocalo);
 }
 
 /* 🔥 NUEVO: Cambio de color del badge para LIMPIEZA */

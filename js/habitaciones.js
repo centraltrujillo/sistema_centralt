@@ -361,6 +361,7 @@ async function renderizarResumenMensual() {
 
 configurarRackTiempoReal();
 renderizarResumenMensual();
+
 /* ==========================================================================
    3. MODAL CHECK-IN (ELECCIÓN DE ORIGEN)
    ========================================================================== */
@@ -628,7 +629,7 @@ async function modalCheckInDirecto(hab) {
 
         // Capturamos moneda y tipo de cambio usando los IDs del modal
         const moneda = getVal('resMoneda') || "PEN";
-        const tipoCambio = getNum('resTipoChange') || getNum('resTipoCambio') || 1.000; // Compatible con ambos IDs comunes
+        const tipoCambio = getNum('resTipoCambio') || 1.000; 
 
         const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
 

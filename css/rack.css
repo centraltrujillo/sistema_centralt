@@ -1154,6 +1154,44 @@ body {
     }
 }
 
+/* ==========================================================================
+   ✨ AJUSTES FINALES: ROTACIONES AUTOMÁTICAS Y EVITAR SOLAPAMIENTOS
+   ========================================================================== */
+
+/* 1. Asegurar que las barras en las filas EXTRAS tengan identidad visual propia */
+.fc-timeline-lane[data-resource-id^="extra"] .fc-event-main {
+    background-color: #f1f5f9 !important; /* Gris pizarra ultra suave */
+    border: 1px solid #cbd5e1 !important;
+}
+
+/* El texto dentro de las filas extras debe ser oscuro para contrastar con el fondo claro */
+.fc-timeline-lane[data-resource-id^="extra"] .fc-event-title {
+    color: #475569 !important;
+    text-shadow: none !important; /* Quita la sombra blanca que se pierde en el fondo claro */
+}
+
+/* Quitar la máscara divisora gris en las filas extras para que se entienda que es un "espejo" */
+.fc-timeline-lane[data-resource-id^="extra"] .fc-event-main::after {
+    background-color: #cbd5e1 !important; 
+}
+
+/* 2. Control estricto de textos largos (Evita que los nombres se corten bruscamente) */
+.fc-timeline-event .fc-event-main {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 3. Resaltar visualmente las reservas activas (En Curso) sobre las finalizadas en la fila real */
+.fc-timeline-event[data-event-status="encurso"] {
+    box-shadow: 0 0 8px rgba(26, 115, 232, 0.4) !important;
+    transform: scaleY(1.02); /* Le da un sutil protagonismo visual */
+}
+
+/* 4. Suavizar la transición cuando pasas el mouse por encima de cualquier bloque */
+.fc-timeline-event {
+    transition: transform 0.15s ease, filter 0.15s ease !important;
+}
 
 /* ---------------------------------------------------------------*/
 /* Obliga a la barra contenedora de FullCalendar a atrapar el evento */

@@ -269,7 +269,6 @@ if (inputHuespedNombre && datalistHuespedes) {
                     const option = document.createElement("option");
                     // El valor que se inyectará en el input al hacer clic
                     option.value = h.nombres_apellidos; 
-                    // Texto secundario que ayuda a la recepcionista a diferenciar (ej: DNI: 75095174)
                     option.textContent = `${h.documento_tipo}: ${h.documento_num}`; 
                     
                     datalistHuespedes.appendChild(option);
@@ -470,7 +469,7 @@ function configurarEventosFormulario() {
                     datosHuespedNuevo = {
                         nombres_apellidos: inputNombre.value.trim().toUpperCase(), 
                         documento_tipo: selectTipoDoc?.value || "DNI", 
-                        documento_num: inputDocNum && inputDocNum.value.trim() !== "" ? inputDocNum.value.trim() : null, // Guarda null si va vacío
+                        documento_num: inputDocNum && inputDocNum.value.trim() !== "" ? inputDocNum.value.trim() : "0",
                         telefono: txtTelefono?.value.trim() || null,
                         correo: txtCorreo?.value.trim() || null,
                         nacionalidad: txtNacionalidad?.value.trim() || "Peruana",
