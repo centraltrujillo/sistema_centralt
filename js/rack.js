@@ -303,28 +303,25 @@ if (inputHuespedNombre && datalistHuespedes) {
         }
     });
 }
-
 // ==========================================================================
 // --- 3. LÓGICA DE NEGOCIO  ---
 // ==========================================================================
 window.calcularMontos = () => {
     
-    const nInputCheckIn     = inputCheckIn;       // Tu nuevo input de entrada
-    const nInputCheckOut    = inputCheckOut;      // Tu nuevo input de salida
-    const nInputTarifa      = inputTarifa;        // Tu nuevo input de tarifa base
-    const nInputTotal       = inputTotal;         // Tu nuevo input de total final
-    const nInputDiferencia  = inputDiferencia;    // Tu nuevo input de saldo/diferencia
-    const nInputAdelanto    = inputAdelantoMonto; // Tu nuevo input de adelanto
-    const nCheckEarly       = checkEarly;         // Tu nuevo checkbox Early
-    const nCheckLate        = checkLate;          // Tu nuevo checkbox Late
-    const nSelectMoneda     = selectMoneda;       // Tu nuevo select de moneda
-    const nInputTipoCambio  = inputTipoCambio;    // Tu nuevo input de tipo de cambio
-    const nForm             = form;               // Tu nuevo contenedor/formulario (opcional)
+    const nInputCheckIn     = inputCheckIn;       
+    const nInputCheckOut    = inputCheckOut;      
+    const nInputTarifa      = inputTarifa;        
+    const nInputTotal       = inputTotal;         
+    const nInputDiferencia  = inputDiferencia;    
+    const nInputAdelanto    = inputAdelantoMonto; 
+    const nCheckEarly       = checkEarly;         
+    const nCheckLate        = checkLate;          
+    const nSelectMoneda     = selectMoneda;       
+    const nInputTipoCambio  = inputTipoCambio;    
+    const nForm             = form;               
 
-    // Validación de existencia de elementos esenciales
     if (!nInputCheckIn || !nInputCheckOut || !nInputTarifa || !nInputTotal || !nInputDiferencia || !nInputAdelanto) return;
 
-    // Captura de valores de fecha y tarifa
     const fIn = new Date(nInputCheckIn.value + 'T00:00:00');
     const fOut = new Date(nInputCheckOut.value + 'T00:00:00');
     const tarifaBase = parseFloat(nInputTarifa.value) || 0;
@@ -341,51 +338,42 @@ window.calcularMontos = () => {
         }
     }
 
-    // Si las fechas están vacías, resetea la pantalla
     if (!nInputCheckIn.value || !nInputCheckOut.value) {
         nInputTotal.value = "0.00";
         nInputDiferencia.value = "0.00";
         return;
     }
 
-    // Cálculo de noches
     const noches = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
 
-    // Si es 0 noches, continuará para permitir el "Day Use"
     if (noches < 0) {
         nInputTotal.value = "0.00";
         nInputDiferencia.value = "0.00";
         return;
     }
     
-    // 🔥 A. Conversión inmediata de la tarifa base a Soles si está en USD
     let tarifaEnSoles = tarifaBase;
     if (moneda === "USD") {
         tarifaEnSoles = tarifaBase * tc; 
     }
 
-    // B. Cálculos base unificados en Soles (Soporta Day Use si noches es 0 cobrando 1 noche)
     let subtotalHospedajeSoles = noches === 0 ? tarifaEnSoles : noches * tarifaEnSoles; 
     let cargoEarlySoles = tieneEarly ? (tarifaEnSoles * 0.5) : 0.00;
     let cargoLateSoles = tieneLate ? (tarifaEnSoles * 0.5) : 0.00;
 
     let totalBrutoSoles = subtotalHospedajeSoles + cargoEarlySoles + cargoLateSoles;
 
-    // 🌟 C. Redondeo estricto hacia arriba (Ej: 90.15 -> 91.00)
     let totalFinalSoles = Math.ceil(totalBrutoSoles);
 
-    // Guardar los cargos calculados en el dataset del formulario
     if (nForm) {
         nForm.dataset.cargoEarly = cargoEarlySoles.toFixed(2);
         nForm.dataset.cargoLate = cargoLateSoles.toFixed(2);
     }
 
-    // Pintamos el total final en Soles ajustado en la pantalla
     nInputTotal.value = totalFinalSoles.toFixed(2);
 
     let adelanto = parseFloat(nInputAdelanto.value) || 0;
 
-    // El guardarraíl del adelanto se evalúa contra el total final redondeado en soles
     if (adelanto > totalFinalSoles && totalFinalSoles > 0) {
         adelanto = totalFinalSoles;
         nInputAdelanto.value = totalFinalSoles.toFixed(2);
@@ -395,7 +383,6 @@ window.calcularMontos = () => {
         }
     }
 
-    // Cálculo final de la diferencia/saldo restante
     nInputDiferencia.value = (totalFinalSoles - adelanto).toFixed(2);
 };
 
@@ -423,153 +410,143 @@ function configurarEventosFormulario() {
         });
     }
 
-    const formReserva = document.getElementById('formNuevaReserva');
-if (formReserva) {
-    formReserva.addEventListener('submit', async (e) => {
-        e.preventDefault(); 
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
 
-        const idUsuarioActivo = formReserva.dataset.idUsuarioLogueado || 
-                               localStorage.getItem("id_usuario_logueado") || 
-                               localStorage.getItem("id_usuario") ||
-                               "CAMBIA_ESTO_POR_TU_UUID_REAL"; 
-                               
-        const nombreRecepcionista = localStorage.getItem("nombre_recepcionista") || "Recepcionista en Turno";
+            const idUsuarioActivo = form.dataset.idUsuarioLogueado || 
+                                   localStorage.getItem("id_usuario_logueado") || 
+                                   localStorage.getItem("id_usuario") ||
+                                   "CAMBIA_ESTO_POR_TU_UUID_REAL"; 
+                                   
+            const nombreRecepcionista = localStorage.getItem("nombre_recepcionista") || "Recepcionista en Turno";
 
-        const monedaSeleccionada = selectMoneda?.value || "PEN"; 
-        const tipoChangeUsado = parseFloat(inputTipoCambio?.value) || 1.000;
-        const adelantoMonto = parseFloat(inputAdelantoMonto?.value) || 0; 
+            const monedaSeleccionada = selectMoneda?.value || "PEN"; 
+            const tipoChangeUsado = parseFloat(inputTipoCambio?.value) || 1.000;
+            const adelantoMonto = parseFloat(inputAdelantoMonto?.value) || 0; 
 
-        // 🏨 LÓGICA DE CONTROL HORARIO DE TRUJILLO PARA FECHA Y TURNO OPERATIVO
-const ahora = new Date();
-const horaPeru = parseInt(ahora.toLocaleTimeString('en-US', { timeZone: 'America/Lima', hour12: false, hour: '2-digit' }));
-const formateadorFecha = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
+            const ahora = new Date();
+            const horaPeru = parseInt(ahora.toLocaleTimeString('en-US', { timeZone: 'America/Lima', hour12: false, hour: '2-digit' }));
+            const formateadorFecha = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
 
-let fechaCalculada = formateadorFecha.format(ahora); // Por defecto "YYYY-MM-DD" hoy
-let turnoCalculado = '';
+            let fechaCalculada = formateadorFecha.format(ahora); 
+            let turnoCalculado = '';
 
-// Asignar Turno y corregir Fecha si es madrugada
-if (horaPeru >= 7 && horaPeru < 14) {
-    turnoCalculado = 'Mañana';
-} else if (horaPeru >= 14 && horaPeru < 21) {
-    turnoCalculado = 'Tarde';
-} else {
-    turnoCalculado = 'Noche';
-    // 💡 EL TRUCO DE MADRUGADA:
-    if (horaPeru >= 0 && horaPeru < 7) {
-        // Restamos las horas necesarias directamente para retroceder de forma segura en la línea de tiempo de Lima
-        const milisegundosEnUnDia = 24 * 60 * 60 * 1000;
-        const ayer = new Date(ahora.getTime() - milisegundosEnUnDia);
-        fechaCalculada = formateadorFecha.format(ayer);
-    }
-}
-
-        // 🔍 CAPTURA EL ID EXISTENTE DESDE EL INPUT OCULTO O DATASET
-        let idHuespedExistente = formReserva.dataset.idHuesped || document.getElementById("resHuespedId")?.value || null;
-        let datosHuespedNuevo = null;
-
-        if (idHuespedExistente === "" || idHuespedExistente === "null") {
-            idHuespedExistente = null;
-        }
-
-        // 🆕 PROCESAMOS COMO HUÉSPED NUEVO SI NO EXISTE ID
-        if (!idHuespedExistente) {
-            const inputNombre = document.getElementById("resHuesped");
-            const selectTipoDoc = document.getElementById("resTipoDoc"); 
-            const inputDocNum = document.getElementById("resDoc");
-
-            const txtTelefono = document.getElementById("resTelefono");
-            const txtCorreo = document.getElementById("resCorreo");
-            const txtNacionalidad = document.getElementById("resNacionalidad");
-            const txtNacimiento = document.getElementById("resNacimiento");
-            const txtCiudad = document.getElementById("resCiudad");
-            const txtPreferencia = document.getElementById("resPreferencia");
-
-            if (inputNombre && inputNombre.value.trim() !== "" && inputDocNum && inputDocNum.value.trim() !== "") {
-                datosHuespedNuevo = {
-                    nombres_apellidos: inputNombre.value.trim().toUpperCase(), 
-                    documento_tipo: selectTipoDoc?.value || "DNI", 
-                    documento_num: inputDocNum.value.trim(),
-                    telefono: txtTelefono?.value.trim() || null,
-                    correo: txtCorreo?.value.trim() || null,
-                    nacionalidad: txtNacionalidad?.value.trim() || "Peruana",
-                    fecha_nacimiento: txtNacimiento?.value || null, 
-                    ciudad: txtCiudad?.value.trim().toUpperCase() || null,
-                    preferencias: txtPreferencia?.value.trim() || null,
-                };
+            if (horaPeru >= 7 && horaPeru < 14) {
+                turnoCalculado = 'Mañana';
+            } else if (horaPeru >= 14 && horaPeru < 21) {
+                turnoCalculado = 'Tarde';
             } else {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({ 
-                        icon: 'warning', 
-                        title: 'Falta el Huésped', 
-                        text: 'Por favor, introduce el número de documento de un huésped existente o completa los datos mínimos (Nombre y Documento) del nuevo cliente.' 
-                    });
+                turnoCalculado = 'Noche';
+                if (horaPeru >= 0 && horaPeru < 7) {
+                    const milisegundosEnUnDia = 24 * 60 * 60 * 1000;
+                    const ayer = new Date(ahora.getTime() - milisegundosEnUnDia);
+                    fechaCalculada = formateadorFecha.format(ayer);
                 }
-                return; 
             }
-        }
 
-        const checkNinosDOM = document.getElementById("resAplicaNinos"); 
-            const aplicaNinos = checkNinosDOM ? (checkNinosDOM.type === "checkbox" ? checkNinosDOM.checked : checkNinosDOM.value === "true") : false;
-            
-            const txtInfoNinosDOM = document.getElementById("resInformacionNinos");
-            const informacionNinos = txtInfoNinosDOM ? txtInfoNinosDOM.value.trim() : "N/A";
+            let idHuespedExistente = form.dataset.idHuesped || document.getElementById("resHuespedId")?.value || null;
+            let datosHuespedNuevo = null;
 
-        const objetoReserva = {
-            id_huesped: idHuespedExistente, 
-            id_usuario: idUsuarioActivo, 
-            id_habitacion: selectHabitacion?.value || null,
-            medio_reserva: document.getElementById("resMedio")?.value || "Presencial",
-            check_in_fecha: inputCheckIn?.value || null,
-            check_out_fecha: inputCheckOut?.value || null,
-            estado_reserva: document.getElementById("resEstado")?.value || "Confirmada",
-            numero_personas: parseInt(document.getElementById("resNumPersonas")?.value) || 1,
-            check_in_hora: document.getElementById("resEarlyHora")?.value || null,
-            check_out_hora: document.getElementById("resLateHora")?.value || null,
-            desayuno: document.getElementById("resInfo")?.value === "true",
-            cochera: document.getElementById("resCochera")?.value || "No",
-            traslado: document.getElementById("resTraslado")?.value || "",
-            notas: document.getElementById("resObservaciones")?.value || "",
-            tiene_early_checkin: checkEarly?.checked || false,
-            tiene_late_checkout: checkLate?.checked || false,
-            tarifa_pactada: parseFloat(inputTarifa?.value) || 0, 
-            moneda: monedaSeleccionada, 
-            tipo_cambio: tipoChangeUsado,
-            nuevo_huesped_datos: datosHuespedNuevo,
-            tiene_ninos: aplicaNinos,              
-            informacion_ninos: informacionNinos     
+            if (idHuespedExistente === "" || idHuespedExistente === "null") {
+                idHuespedExistente = null;
+            }
 
-        };
+            // 🆕 PROCESAMOS COMO HUÉSPED NUEVO SI NO EXISTE ID EN EL DATASET
+            if (!idHuespedExistente) {
+                const inputNombre = document.getElementById("resHuesped");
+                const selectTipoDoc = document.getElementById("resTipoDoc"); 
+                const inputDocNum = document.getElementById("resDoc");
 
-        const selectMetodoDOM = document.getElementById("resMetodoPago");
-        const inputDetalleDOM = document.getElementById("resAdelantoDetalle");
+                const txtTelefono = document.getElementById("resTelefono");
+                const txtCorreo = document.getElementById("resCorreo");
+                const txtNacionalidad = document.getElementById("resNacionalidad");
+                const txtNacimiento = document.getElementById("resNacimiento");
+                const txtCiudad = document.getElementById("resCiudad");
+                const txtPreferencia = document.getElementById("resPreferencia");
 
-        const objetoPago = {
-            id_usuario: idUsuarioActivo, 
-            turno: turnoCalculado, 
-            nombre_recepcionista: nombreRecepcionista,
-            moneda: "PEN",                                      
-            tipo_cambio_usado: 1.000,                                   
-            monto_soles: adelantoMonto,                                
-            adelanto_monto: adelantoMonto,                             
-            metodo_pago: selectMetodoDOM?.value || "Efectivo",
-            concepto: "Adelanto",
-            nro_operacion: inputDetalleDOM?.value || "",
-            fecha_pago: fechaCalculada,                                
-            hora_pago: ahora.toLocaleTimeString('it-IT', { timeZone: 'America/Lima' })
-        };
+                // ✨ CAMBIO AQUÍ: Ahora solo valida que el NOMBRE no esté vacío. El documento es opcional.
+                if (inputNombre && inputNombre.value.trim() !== "") {
+                    datosHuespedNuevo = {
+                        nombres_apellidos: inputNombre.value.trim().toUpperCase(), 
+                        documento_tipo: selectTipoDoc?.value || "DNI", 
+                        documento_num: inputDocNum && inputDocNum.value.trim() !== "" ? inputDocNum.value.trim() : null, // Guarda null si va vacío
+                        telefono: txtTelefono?.value.trim() || null,
+                        correo: txtCorreo?.value.trim() || null,
+                        nacionalidad: txtNacionalidad?.value.trim() || "Peruana",
+                        fecha_nacimiento: txtNacimiento?.value || null, 
+                        ciudad: txtCiudad?.value.trim().toUpperCase() || null,
+                        preferencias: txtPreferencia?.value.trim() || null,
+                    };
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({ 
+                            icon: 'warning', 
+                            title: 'Falta el Huésped', 
+                            text: 'Por favor, selecciona un huésped existente o escribe al menos el Nombre Completo para registrar uno nuevo.' 
+                        });
+                    }
+                    return; 
+                }
+            }
 
-        const pagoAProcesar = objetoPago.monto_soles > 0 ? objetoPago : null;
+            const aplicaNinos = checkAplicaNinos ? (checkAplicaNinos.type === "checkbox" ? checkAplicaNinos.checked : checkAplicaNinos.value === "true") : false;
+            const informacionNinos = inputInformacionNinos ? inputInformacionNinos.value.trim() : "N/A";
 
-        // Enviamos todo al backend/función transaccional
-        await guardarReservaTransaccional(objetoReserva, pagoAProcesar);
-    });
-}
+            const objetoReserva = {
+                id_huesped: idHuespedExistente, 
+                id_usuario: idUsuarioActivo, 
+                id_habitacion: selectHabitacion?.value || null,
+                medio_reserva: document.getElementById("resMedio")?.value || "Presencial",
+                check_in_fecha: inputCheckIn?.value || null,
+                check_out_fecha: inputCheckOut?.value || null,
+                estado_reserva: document.getElementById("resEstado")?.value || "Confirmada",
+                numero_personas: parseInt(document.getElementById("resNumPersonas")?.value) || 1,
+                check_in_hora: document.getElementById("resEarlyHora")?.value || null,
+                check_out_hora: document.getElementById("resLateHora")?.value || null,
+                desayuno: document.getElementById("resInfo")?.value === "true",
+                cochera: document.getElementById("resCochera")?.value || "No",
+                traslado: document.getElementById("resTraslado")?.value || "",
+                notes: document.getElementById("resObservaciones")?.value || "", 
+                tiene_early_checkin: checkEarly?.checked || false,
+                tiene_late_checkout: checkLate?.checked || false,
+                tarifa_pactada: parseFloat(inputTarifa?.value) || 0, 
+                moneda: monedaSeleccionada, 
+                tipo_cambio: tipoChangeUsado,
+                nuevo_huesped_datos: datosHuespedNuevo,
+                tiene_ninos: aplicaNinos,              
+                informacion_ninos: informacionNinos     
+            };
+
+            const objetoPago = {
+                id_usuario: idUsuarioActivo, 
+                turno: turnoCalculado, 
+                nombre_recepcionista: nombreRecepcionista,
+                moneda: "PEN",                                      
+                tipo_cambio_usado: 1.000,                                   
+                monto_soles: adelantoMonto,                                
+                adelanto_monto: adelantoMonto,                              
+                metodo_pago: selectMetodoPago?.value || "Efectivo",
+                concepto: "Adelanto",
+                nro_operacion: inputAdelantoDetalle?.value || "",
+                fecha_pago: fechaCalculada,                                
+                hora_pago: ahora.toLocaleTimeString('it-IT', { timeZone: 'America/Lima' })
+            };
+
+            const pagoAProcesar = objetoPago.monto_soles > 0 ? objetoPago : null;
+
+            if (typeof guardarReservaTransaccional === 'function') {
+                await guardarReservaTransaccional(objetoReserva, pagoAProcesar);
+            }
+        });
+    }
 
     [selectHabitacion, inputCheckIn, inputCheckOut].forEach(elemento => {
-        elemento?.addEventListener("change", verificarDisponibilidadRealTime);
+        if (elemento) {
+            elemento.addEventListener("change", typeof verificarDisponibilidadRealTime === 'function' ? verificarDisponibilidadRealTime : () => {});
+        }
     });
 }
-
 // ==========================================================================
 // --- 4. INICIALIZAR RACK CON FULLCALENDAR SCHEDULER ---
 // ==========================================================================
@@ -584,7 +561,7 @@ const coloresMedios = {
     'Expedia': '#eab308',   
     'Day use': '#ec4899',    
     'Gmail': '#ef4444',      
-    'Otro': '#64748b'       
+    'Otro': '#64748b'        
 };
 
 function inicializarCalendarioRack() {
@@ -610,34 +587,27 @@ function inicializarCalendarioRack() {
         eventOverlap: false,         
         slotEventOverlap: false,     
         
-        // ==========================================================================
-        // ⏰ CONFIGURACIÓN PERSONALIZADA DE FORMATOS SEGÚN LA VISTA
-        // ==========================================================================
         views: {
             resourceTimelineMonth: {
-                // Formato de cabecera exclusivo para la vista Mensual (Mes arriba, Días abajo)
                 slotLabelFormat: [
                     { month: 'long', year: 'numeric' }, 
                     { weekday: 'short', day: 'numeric' } 
                 ]
             },
             resourceTimelineDay: {
-                slotDuration: '01:00:00',     // Genera una columna por cada hora del día
-                snapDuration: '00:30:00',     // Permite modular rangos de media hora
-                // Formato de cabecera exclusivo para la vista Diaria (Día arriba, 24 Horas abajo)
+                slotDuration: '01:00:00',     
+                snapDuration: '00:30:00',     
                 slotLabelFormat: [
-                    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, // Cabecera superior: "sábado, 30 de mayo..."
-                    { hour: 'numeric', minute: '2-digit', hour12: false }               // Cabecera inferior: 00:00, 01:00, etc.
+                    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }, 
+                    { hour: 'numeric', minute: '2-digit', hour12: false }               
                 ]
             }
         },
         
         navLinks: true,
         navLinkDayClick: 'resourceTimelineDay',
-
         eventMinHeight: 0,       
         eventOrder: 'start',
-        
         resourceOrder: 'index,piso,numero', 
 
         buttonText: {
@@ -665,9 +635,7 @@ function inicializarCalendarioRack() {
         },
 
         resourceLaneContent: function(arg) {
-            if (arg.resource.id === 'total-row') {
-                return; 
-            }
+            if (arg.resource.id === 'total-row') return; 
         },
 
         // =======================================================================
@@ -710,18 +678,19 @@ function inicializarCalendarioRack() {
 
             if (estado === 'En Curso' || estado === 'Finalizada') {
                 backgroundColor = '#f8fafc'; 
-                textColor = '#0f172a';       
+                textColor = '#0f172a';      
                 borderColor = '#cbd5e1';     
                 iconHtml = `<span style="margin-right: 5px; color: #10b981; font-weight: bold;">✓</span>`;
             } 
             else if (estado === 'Cancelada' || estado === 'No Show') {
                 backgroundColor = '#fee2e2'; 
-                textColor = '#991b1b';       
+                textColor = '#991b1b';      
                 borderColor = '#fca5a5';
                 iconHtml = `<span style="margin-right: 5px; color: #ef4444; font-weight: bold;">✕</span>`;
                 opacity = '0.7';             
             }
 
+            // 🌟 CORREGIDO: Se removió 'pointer-events: none' para permitir la ejecución de eventClick
             return {
                 html: `
                 <div style="
@@ -742,10 +711,9 @@ function inicializarCalendarioRack() {
                     text-overflow: ellipsis;
                     box-sizing: border-box;
                     opacity: ${opacity};
-                    pointer-events: none;
                 ">
                     ${iconHtml}
-                    <span style="overflow: hidden; text-overflow: ellipsis; pointer-events: none;">${arg.event.title}</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis;">${arg.event.title}</span>
                 </div>`
             };
         },
@@ -795,29 +763,22 @@ function inicializarCalendarioRack() {
                 modalVista.classList.remove("active");
                 modalVista.style.display = "none";
             }
-            if (window.event && (window.event.target.closest('.fc-timeline-event') || window.event.target.closest('.fc-event'))) {
-                if (calendar) calendar.unselect();
-                return;
-            }
+            
             console.log("Nueva reserva - Desde:", selectionInfo.startStr, "Hasta:", selectionInfo.endStr);
             const idHabitacion = selectionInfo.resource ? selectionInfo.resource.id : "";
 
             editId = null;
+            
+            // Usamos de forma preferencial la variable global del formulario 'form'
+            const formNuevaRes = document.getElementById("formNuevaReserva");
+            if (formNuevaRes) {
+                formNuevaRes.reset();
+                delete formNuevaRes.dataset.idHuesped;
+            }
 
             if (document.getElementById("resCheckIn")) document.getElementById("resCheckIn").value = selectionInfo.startStr.split('T')[0];
             if (document.getElementById("resCheckOut")) document.getElementById("resCheckOut").value = selectionInfo.endStr.split('T')[0];
             if (document.getElementById("resHabitacion")) document.getElementById("resHabitacion").value = idHabitacion;
-            
-            const modalTitle = document.getElementById("modalTitle");
-            if (modalTitle) modalTitle.textContent = "Nueva Reserva";
-            
-            const formNuevaRes = document.getElementById("formNuevaReserva") || window.form;
-            if (formNuevaRes) {
-                formNuevaRes.reset();
-                if (document.getElementById("resCheckIn")) document.getElementById("resCheckIn").value = selectionInfo.startStr.split('T')[0];
-                if (document.getElementById("resCheckOut")) document.getElementById("resCheckOut").value = selectionInfo.endStr.split('T')[0];
-                if (document.getElementById("resHabitacion")) document.getElementById("resHabitacion").value = idHabitacion;
-            }
 
             if (typeof window.calcularMontos === 'function') window.calcularMontos();
             
@@ -838,16 +799,17 @@ function inicializarCalendarioRack() {
 }
 
 // ==========================================================================
-// --- CONTROL DE LA INTERFAZ DEL MODAL (AL HACER CLICK/ARRASTRE EN EL RACK) ---
+// --- CONTROL DE LA INTERFAZ DEL MODAL ---
 // ==========================================================================
 window.prepararNuevaReserva = abrirModalNuevaReserva;
 
 function abrirModalNuevaReserva(startStr, endStr, resourceId) {
-    if (form) {
-        form.reset();
-        delete form.dataset.idHuesped;
-        editId = null; 
+    const formNuevaRes = document.getElementById("formNuevaReserva");
+    if (formNuevaRes) {
+        formNuevaRes.reset();
+        delete formNuevaRes.dataset.idHuesped;
     }
+    editId = null; 
     
     const modalTitle = document.getElementById('modalTitle');
     if (modalTitle) modalTitle.textContent = "Nueva Reserva Directa";
@@ -856,12 +818,10 @@ function abrirModalNuevaReserva(startStr, endStr, resourceId) {
     const inputCheckOut = document.getElementById('resCheckOut');
     
     if (inputCheckIn) inputCheckIn.value = startStr;
-    
     if (inputCheckOut) {
         if (startStr !== endStr) {
             inputCheckOut.value = endStr;
         } else {
-            // Si hace un solo clic en un casillero, le damos automáticamente 1 noche por defecto
             const d = new Date(startStr + "T00:00:00");
             d.setDate(d.getDate() + 1);
             inputCheckOut.value = d.toISOString().split('T')[0];
@@ -873,22 +833,18 @@ function abrirModalNuevaReserva(startStr, endStr, resourceId) {
         inputHabitacion.value = resourceId;
     }
 
-    // Abre el formulario clásico de registro
     const modalFormulario = document.getElementById("modalReserva");
     if (modalFormulario) {
         modalFormulario.classList.add("active");
         modalFormulario.style.display = 'flex';
     }
     
-    if (typeof window.calcularMontos === 'function') {
-        window.calcularMontos();
-    }
+    if (typeof window.calcularMontos === 'function') window.calcularMontos();
 }
 
 // ==========================================================================
-// 👁️ FUNCIÓN MAESTRA: CARGAR Y MOSTRAR LA FICHA DE LECTURA (modalVistaReserva)
+// 👁️ FUNCIÓN MAESTRA: CARGAR Y MOSTRAR LA FICHA DE LECTURA
 // ==========================================================================
-
 let rackInicializando = true;
 setTimeout(() => { rackInicializando = false; }, 1500);
 
@@ -912,7 +868,7 @@ window.mostrarFichaReserva = async function(idReserva, esClickReal = false) {
         if (error) throw error;
         if (!reserva) return;
 
-        // 1. Inyectar Información del Huésped en el nuevo HTML
+        // 1. Inyectar Información del Huésped
         const h = reserva.huespedes || {};
         document.getElementById("viewHuespedNombre").textContent = h.nombres_apellidos || "---";
         document.getElementById("viewHuespedDoc").textContent = `${h.documento_tipo || 'DOC'}: ${h.documento_num || '---'}`;
@@ -932,7 +888,6 @@ window.mostrarFichaReserva = async function(idReserva, esClickReal = false) {
         document.getElementById("viewResHoraEarly").textContent = reserva.check_in_hora || "No aplica";
         document.getElementById("viewResHoraLate").textContent = reserva.check_out_hora || "No aplica";
         
-        // Cálculo rápido de noches para la ficha
         const f1 = new Date(reserva.check_in_fecha + 'T00:00:00');
         const f2 = new Date(reserva.check_out_fecha + 'T00:00:00');
         const noches = Math.round((f2 - f1) / (1000 * 60 * 60 * 24)) || 0;
@@ -947,14 +902,22 @@ window.mostrarFichaReserva = async function(idReserva, esClickReal = false) {
         document.getElementById("viewResTraslado").textContent = reserva.traslado || "No";
         document.getElementById("viewResNotas").textContent = reserva.notes || "Ninguna";
 
-        // 4. Bloque Financiero profesional
+        // 4. Bloque Financiero Profesional Cruzado Seguro
         const simbolo = reserva.moneda === "USD" ? "$" : "S/";
+        const tc = parseFloat(reserva.tipo_cambio) || 3.75;
         document.getElementById("viewResTarifa").textContent = `${simbolo} ${parseFloat(reserva.tarifa_pactada).toFixed(2)}`;
+        document.getElementById("viewResTipoCambio").textContent = tc.toFixed(3);
         
-        const extras = (parseFloat(reserva.cargo_early_checkin) || 0) + (parseFloat(reserva.cargo_late_checkout) || 0);
-        document.getElementById("viewResCargosExtras").textContent = `${simbolo} ${extras.toFixed(2)}`;
-        document.getElementById("viewResTipoCambio").textContent = parseFloat(reserva.tipo_cambio).toFixed(3);
+        // Conversión y suma de cargos extras de forma segura
+        const cargoEarlySoles = parseFloat(reserva.cargo_early_checkin) || 0;
+        const cargoLateSoles = parseFloat(reserva.cargo_late_checkout) || 0;
+        const extrasSoles = cargoEarlySoles + cargoLateSoles;
+        
+        // Renderizamos los extras basándonos en la moneda base visual
+        const extrasVisual = reserva.moneda === "USD" ? (extrasSoles / tc) : extrasSoles;
+        document.getElementById("viewResCargosExtras").textContent = `${simbolo} ${extrasVisual.toFixed(2)}`;
 
+        // Consulta del Adelanto Financiero
         const { data: pago } = await supabase
             .from('pagos')
             .select('monto_soles, metodo_pago, nro_operacion, nombre_recepcionista')
@@ -965,29 +928,41 @@ window.mostrarFichaReserva = async function(idReserva, esClickReal = false) {
         if (pago) {
             document.getElementById("viewResMetodoText").textContent = pago.metodo_pago || "Efectivo";
             document.getElementById("viewResAdelanto").textContent = `S/ ${parseFloat(pago.monto_soles).toFixed(2)}`;
-            if (pago.nro_operacion) {
-                document.getElementById("viewBlockOperacion").classList.remove("hidden");
-                document.getElementById("viewBlockOperacion").textContent = pago.nro_operacion;
-            } else {
-                document.getElementById("viewBlockOperacion").classList.add("hidden");
+            const blockOp = document.getElementById("viewBlockOperacion");
+            if (blockOp) {
+                if (pago.nro_operacion) {
+                    blockOp.classList.remove("hidden");
+                    blockOp.textContent = pago.nro_operacion;
+                } else {
+                    blockOp.classList.add("hidden");
+                }
             }
             document.getElementById("viewAuditRecepcionista").textContent = pago.nombre_recepcionista || "Recepcionista";
         } else {
             document.getElementById("viewResMetodoText").textContent = "---";
             document.getElementById("viewResAdelanto").textContent = `S/ 0.00`;
-            document.getElementById("viewBlockOperacion").classList.add("hidden");
+            if (document.getElementById("viewBlockOperacion")) document.getElementById("viewBlockOperacion").classList.add("hidden");
             document.getElementById("viewAuditRecepcionista").textContent = "---";
         }
 
-        const totalNeto = (parseFloat(reserva.total_reserva) || (noches * (parseFloat(reserva.tarifa_pactada) || 0))) + extras;
-        document.getElementById("viewResTotal").textContent = `${simbolo} ${totalNeto.toFixed(2)}`;
+        // Lógica de cálculo del Total Bruto alineado con Math.ceil de creación
+        let subtotalHospedajeSoles = noches === 0 ? (reserva.moneda === "USD" ? reserva.tarifa_pactada * tc : reserva.tarifa_pactada) : (noches * (reserva.moneda === "USD" ? reserva.tarifa_pactada * tc : reserva.tarifa_pactada));
+        let totalFinalSoles = Math.ceil(subtotalHospedajeSoles + extrasSoles);
+        
+        const totalVisual = reserva.moneda === "USD" ? (totalFinalSoles / tc) : totalFinalSoles;
+        document.getElementById("viewResTotal").textContent = `${simbolo} ${totalVisual.toFixed(2)}`;
 
-        // 5. Configurar el botón "Editar Reserva" para que abra el formulario clásico si se requiere cambiar algo
+        // 5. Configurar el botón "Editar Reserva" inyectando TODO el estado previo
         const btnEditar = document.getElementById("btnIrAEditar");
         if (btnEditar) {
             btnEditar.onclick = () => {
                 window.cerrarModalVista();
                 editId = idReserva; 
+                
+                const formMaster = document.getElementById("formNuevaReserva");
+                if (formMaster) {
+                    formMaster.dataset.idHuesped = reserva.id_huesped || "";
+                }
                 
                 if (document.getElementById("resCheckIn")) document.getElementById("resCheckIn").value = reserva.check_in_fecha;
                 if (document.getElementById("resCheckOut")) document.getElementById("resCheckOut").value = reserva.check_out_fecha;
@@ -995,12 +970,28 @@ window.mostrarFichaReserva = async function(idReserva, esClickReal = false) {
                 if (document.getElementById("resTarifa")) document.getElementById("resTarifa").value = reserva.tarifa_pactada;
                 if (document.getElementById("resEstado")) document.getElementById("resEstado").value = reserva.estado_reserva;
                 if (document.getElementById("resMedio")) document.getElementById("resMedio").value = reserva.medio_reserva;
+                if (document.getElementById("resMoneda")) document.getElementById("resMoneda").value = reserva.moneda || "PEN";
+                if (document.getElementById("resTipoCambio")) document.getElementById("resTipoCambio").value = reserva.tipo_cambio || "3.75";
                 
+                // Mapeo seguro de Checkboxes de estado extendido
+                const checkEarly = document.getElementById("resAplicaEarly");
+                if (checkEarly) checkEarly.checked = reserva.tiene_early_checkin || false;
+                const checkLate = document.getElementById("resAplicaLate");
+                if (checkLate) checkLate.checked = reserva.tiene_late_checkout || false;
+                
+                // Mapeo seguro de la sección Niños
+                const checkNinos = document.getElementById("resAplicaNinos");
+                if (checkNinos) checkNinos.checked = reserva.tiene_ninos || false;
+                const txtNinos = document.getElementById("resInformacionNinos");
+                if (txtNinos) txtNinos.value = reserva.informacion_ninos || "";
+
                 const modalForm = document.getElementById("modalReserva");
                 if (modalForm) {
                     modalForm.classList.add("active");
                     modalForm.style.display = 'flex';
                 }
+                
+                if (typeof window.calcularMontos === 'function') window.calcularMontos();
             };
         }
 
@@ -1022,6 +1013,7 @@ window.cerrarModalVista = () => {
         modalVista.style.display = "none";
     }
 };
+
 
 // ==========================================================================
 // --- 6. RENDERIZADO Y CONSULTA (TABLA, KPIS Y EVENTOS DEL RACK) ---
@@ -1247,8 +1239,8 @@ while (fechaIterada <= fFin) {
 
                 const fIn = new Date(res.check_in_fecha + 'T00:00:00');
                 const fOut = new Date(res.check_out_fecha + 'T00:00:00');
-                const nichesCalculados = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
-                const noches = nichesCalculados > 0 ? nichesCalculados : 1;
+                const nochesCalculadas = Math.round((fOut - fIn) / (1000 * 60 * 60 * 24));
+                const noches = nochesCalculadas > 0 ? nochesCalculadas : 1;
 
                 const adicionales = (parseFloat(res.cargo_early_checkin) || 0) + (parseFloat(res.cargo_late_checkout) || 0);
                 const totalCalculadoEstancia = (noches * tarifaBase) + adicionales;
@@ -1628,7 +1620,7 @@ window.prepararEdicion = async (id) => {
         if (document.getElementById("resCheckOut")) document.getElementById("resCheckOut").value = res.check_out_fecha || "";
         if (document.getElementById("resEstado")) document.getElementById("resEstado").value = res.estado_reserva || "Confirmada";
         if (document.getElementById("resNumPersonas")) document.getElementById("resNumPersonas").value = res.numero_personas || "1";
-        if (document.getElementById("resAplcaNiños")) document.getElementById("resAplcaNiños").checked = res.aplica_ninos || false;
+        if (document.getElementById("resAplcaNiños")) document.getElementById("resAplcaNiños").checked = res.tiene_ninos || false;
         if (document.getElementById("resInformacionNinos")) document.getElementById("resInformacionNinos").value = res.informacion_ninos || "";
         
         // Extras y Tiempos
@@ -1760,7 +1752,7 @@ window.mostrarFichaReserva = async function(idReserva) {
         if (document.getElementById("viewResHoraEarly")) document.getElementById("viewResHoraEarly").textContent = res.tiene_early_checkin ? (res.check_in_hora || "Sí (Sin hora)") : "No aplica";
         if (document.getElementById("viewResHoraLate")) document.getElementById("viewResHoraLate").textContent = res.tiene_late_checkout ? (res.check_out_hora || "Sí (Sin hora)") : "No aplica";
         if (document.getElementById("viewResPersonas")) document.getElementById("viewResPersonas").textContent = res.numero_personas || "1";
-        if (document.getElementById("viewResAplicaNinos")) document.getElementById("viewResAplicaNinos").textContent = res.aplica_ninos ? "Sí" : "No";
+        if (document.getElementById("viewResAplicaNinos")) document.getElementById("viewResAplicaNinos").textContent = res.tiene_ninos ? "Sí" : "No";
         if (document.getElementById("viewInformacionNinos")) document.getElementById("viewInformacionNinos").textContent = res.informacion_ninos || "N/A";
         
         const badgeEst = document.getElementById("viewResEstado");
