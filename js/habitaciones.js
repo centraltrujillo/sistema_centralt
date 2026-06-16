@@ -149,15 +149,34 @@ async function actualizarTableroRack() {
         if (errHabs) throw errHabs;
 
         // ==========================================================================
-        // 2. BUSCAR RESERVAS ACTIVAS (CONFIRMADAS O EN CURSO)
+        // 2. BUSCAR RESERVAS ACTIVAS Y SUS PAGOS EN PARALELO
         // ==========================================================================
-        // 🌟 CAMBIO ESENCIAL 1: Añadimos 'tarifa_pactada' y 'AdelantoMonto' a la selección de campos
-        const { data: reservasHoy, error: errRes } = await supabase
+        // Traemos las reservas activas (sin el campo AdelantoMonto que pertenece a pagos)
+        const qReservas = supabase
             .from('reservas')
-            .select('id, id_habitacion, check_in_fecha, check_out_fecha, tarifa_pactada, AdelantoMonto, cargo_early_checkin, cargo_late_checkout, estado_reserva, numero_personas, tiene_early_checkin, tiene_late_checkout')
-            .in('estado_reserva', ['Confirmada', 'En Curso']); 
+            .select('id, id_habitacion, check_in_fecha, check_out_fecha, tarifa_pactada, cargo_early_checkin, cargo_late_checkout, estado_reserva, numero_personas, tiene_early_checkin, tiene_late_checkout')
+            .in('estado_reserva', ['Confirmada', 'En Curso']);
 
-        if (errRes) throw errRes;
+        // Ejecutamos las consultas en paralelo para no ralentizar el Rack
+        const [resReservas, resPagos] = await Promise.all([
+            qReservas,
+            supabase.from('pagos').select('id_reserva, adelanto_monto') // 👈 Ajusta 'adelanto_monto' o el nombre exacto de la columna de dinero si varía
+        ]);
+
+        if (resReservas.error) throw resReservas.error;
+        if (resPagos.error) throw resPagos.error;
+
+        const reservasHoy = resReservas.data;
+        const listaPagos = resPagos.data || [];
+
+        // Agrupamos los pagos por 'id_reserva' para sumarlos eficientemente
+        const mapaPagos = {};
+        listaPagos.forEach(p => {
+            if (p.id_reserva) {
+                // Sumamos todos los abonos que pertenezcan a la misma reserva
+                mapaPagos[p.id_reserva] = (mapaPagos[p.id_reserva] || 0) + (parseFloat(p.adelanto_monto) || 0);
+            }
+        });
 
         const fechaHoyObj = new Date(hoy + 'T00:00:00');
         const reservasMapa = {};
@@ -173,7 +192,7 @@ async function actualizarTableroRack() {
                         return; 
                     }
 
-                    // 🧮 CAMBIO ESENCIAL 2: Calcular el saldo de la reserva de forma rápida
+                    // 🧮 CALCULO OPERATIVO DE DEUDA
                     const fIn = new Date(res.check_in_fecha);
                     const fOut = new Date(res.check_out_fecha);
                     const noches = Math.ceil(Math.abs(fOut - fIn) / (1000 * 60 * 60 * 24)) || 1;
@@ -181,12 +200,14 @@ async function actualizarTableroRack() {
                     const costoHospedaje = (parseFloat(res.tarifa_pactada) || 0) * noches;
                     const cargoEarly = res.tiene_early_checkin ? (parseFloat(res.cargo_early_checkin) || 0) : 0;
                     const cargoLate = res.tiene_late_checkout ? (parseFloat(res.cargo_late_checkout) || 0) : 0;
-                    const totalAbonado = parseFloat(res.AdelantoMonto) || 0;
+                    
+                    // Buscamos el acumulado de abonos en nuestro mapa indexado
+                    const totalAbonado = mapaPagos[res.id] || 0;
 
                     const saldoNeto = (costoHospedaje + cargoEarly + cargoLate) - totalAbonado;
 
-                    // 🚨 Determinar si es HOY su salida, el huésped sigue hospedado ('En Curso') y mantiene saldo pendiente
-                    const deudaCheckOut = (res.check_out_fecha === hoy) && (res.estado_reserva === 'En Curso') && (saldoNeto > 0);
+                    // 🚨 Condición crítica de alerta: Sale hoy, está adentro y mantiene saldo > 0
+                    const deudaCheckOut = (res.check_out_fecha === hoy) && (res.estado_reserva === 'En Curso') && (saldoNeto > 0.10);
 
                     // 🚨 REGLAS DE MAPEADO HORARIO DE RACK ACORDES AL HOTEL
 
@@ -195,19 +216,19 @@ async function actualizarTableroRack() {
                         reservasMapa[res.id_habitacion] = {
                             id: res.id,
                             tieneEarly: false, 
-                            tieneLate: res.tiene_late_checkout, // 👈 Evaluamos Late Checkout solo si ya está adentro
+                            tieneLate: res.tiene_late_checkout, 
                             estado: res.estado_reserva,
                             checkIn: res.check_in_fecha,
                             numeroPersonas: parseInt(res.numero_personas) || 1,
                             forzarEntrada: true,
-                            deudaCritica: deudaCheckOut // 👈 Guardamos el estado de alerta
+                            deudaCritica: deudaCheckOut 
                         };
                     } 
                     // Caso 2: Reservas del día contable actual
                     else if (res.check_in_fecha === hoy) {
                         reservasMapa[res.id_habitacion] = {
                             id: res.id,
-                            tieneEarly: res.tiene_early_checkin, // Respeta fielmente la Base de Datos
+                            tieneEarly: res.tiene_early_checkin, 
                             tieneLate: false,
                             estado: res.estado_reserva,
                             checkIn: res.check_in_fecha,
@@ -220,7 +241,7 @@ async function actualizarTableroRack() {
                     else if (esMadrugada && res.check_in_fecha === fechaRealHoy) {
                         reservasMapa[res.id_habitacion] = {
                             id: res.id,
-                            tieneEarly: res.tiene_early_checkin, // 👈 Muestra Early solo si se guardó como tal en la BD
+                            tieneEarly: res.tiene_early_checkin, 
                             tieneLate: false,
                             estado: res.estado_reserva,
                             checkIn: res.check_in_fecha,
