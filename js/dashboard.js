@@ -2,14 +2,21 @@ import { client as supabase } from './config.js';
 
 let chartSemanal, chartMensual;
 
-// --- FUNCIONES DE APOYO ---
+// --- FUNCIONES DE APOYO CORREGIDAS ---
 function formatearFechaJS(fechaInput) {
     if (!fechaInput) return null;
     
     if (typeof fechaInput === 'string') {
-        // Reemplazar espacios por 'T' si viene de Postgres para garantizar compatibilidad universal
-        const stringLimpio = fechaInput.trim().replace(" ", "T");
-        const d = new Date(stringLimpio);
+        const stringLimpio = fechaInput.trim();
+        
+        // Si es fecha pura de Postgres (YYYY-MM-DD), forzamos hora local para evitar el desfase UTC-5
+        if (stringLimpio.length === 10 && stringLimpio.includes("-")) {
+            return new Date(stringLimpio + "T00:00:00");
+        }
+        
+        // Si es un timestamp completo, cambiamos el espacio por T
+        const stringPostgres = stringLimpio.replace(" ", "T");
+        const d = new Date(stringPostgres);
         return isNaN(d.getTime()) ? null : d;
     }
     
@@ -147,11 +154,11 @@ function inicializarDashboard() {
             const mesActual = ahora.getMonth();
             const anioActual = ahora.getFullYear();
 
-            // Inicio de la semana operativa (Lunes)
-            const inicioSemana = new Date(ahora);
+            // Configuración rígida de la semana actual (Lunes plano a las 00:00)
+            const inicioSemana = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
             const diaHoy = inicioSemana.getDay(); 
-            const diff = inicioSemana.getDate() - diaHoy + (diaHoy === 0 ? -6 : 1); 
-            inicioSemana.setDate(diff);
+            const diff = (diaHoy === 0) ? 6 : diaHoy - 1; 
+            inicioSemana.setDate(inicioSemana.getDate() - diff);
             inicioSemana.setHours(0, 0, 0, 0);
 
             const fechaMesPasado = new Date();
@@ -160,7 +167,7 @@ function inicializarDashboard() {
             const anioPasado = fechaMesPasado.getFullYear();
 
             pagos.forEach(pago => {
-                // CORRECCIÓN: Usar exactamente 'monto_soles' o 'adelanto_monto' de tu tabla SQL
+                // Estandarización de columnas según tu SQL
                 const monto = Number(pago.monto_soles || pago.adelanto_monto || 0);
                 const fechaRaw = pago.fecha_pago || pago.created_at;
                 const fechaObj = formatearFechaJS(fechaRaw);
@@ -169,13 +176,19 @@ function inicializarDashboard() {
                     const m = fechaObj.getMonth();
                     const y = fechaObj.getFullYear();
                     
+                    // Clonamos fecha sin horas para la comparativa semanal limpia
+                    const fechaPagoPlana = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), fechaObj.getDate());
+
                     // Filtro para Gráfico Semanal
-                    if (fechaObj >= inicioSemana) {
-                        const dia = fechaObj.getDay();
+                    if (fechaPagoPlana >= inicioSemana) {
+                        const dia = fechaPagoPlana.getDay();
                         const index = (dia === 0) ? 6 : dia - 1; 
-                        ingresosSemana[index] += monto;
+                        if (index >= 0 && index < 7) {
+                            ingresosSemana[index] += monto;
+                        }
                     }
 
+                    // Agrupación mensual corregida (Sin saltos de mes accidentales)
                     const keyMes = `${m}-${y}`;
                     ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
 
@@ -272,7 +285,7 @@ function inicializarDashboard() {
         }
     }
 
-    // E. RENDERIZAR ACTIVIDAD RECIENTE (CON CRUCE DE BASE DE DATOS EXTRACTO)
+    // E. RENDERIZAR ACTIVIDAD RECIENTE (CON CONCEPTO REAL, FECHA Y HORA)
     async function renderizarActividadReciente() {
         const list = document.getElementById('list-checkins');
         if (!list) return;
@@ -293,30 +306,31 @@ function inicializarDashboard() {
 
             for (const pago of pagosRecientes) {
                 const idReserva = pago.id_reserva;
-                let tipoExacto = pago.concepto ? pago.concepto.toUpperCase() : "PAGO DE ESTADÍA";
                 
-                // Valores base por defecto
-                let nombreHuesped = 'Huésped';
+                // 1. Obtener el concepto directo de la base de datos (Ej: Adelanto, Saldo, Consumo...)
+                const conceptoReal = pago.concepto ? pago.concepto.toUpperCase() : "PAGO";
+                const metodo = pago.metodo_pago || "Efectivo";
+                
+                // 2. Extraer y formatear Fecha (YYYY-MM-DD) y Hora (HH:MM:SS)
+                const fechaLimpia = pago.fecha_pago; // Formato string directo "2026-06-11"
+                // Cortamos los segundos de la hora para que se vea más limpio (Ej: "13:20")
+                const horaLimpia = pago.hora_pago ? pago.hora_pago.substring(0, 5) : "00:00"; 
+
+                let nombreHuesped = 'HUEŚPED';
                 let numHabitacion = 'S/N';
                 const montoPago = Number(pago.monto_soles || pago.adelanto_monto || 0);
 
                 if (idReserva) {
                     try {
-                        // 1. Obtener la Reserva para sacar los enlaces relacionales
+                        // Traer la Reserva para obtener las llaves relacionales
                         const { data: resData } = await supabase
                             .from('reservas')
-                            .select('*')
+                            .select('id_huesped, id_habitacion')
                             .eq('id', idReserva)
                             .maybeSingle();
 
                         if (resData) {
-                            // Cambiar dinámicamente el concepto si la reserva está terminada
-                            const estReserva = resData.estado_reserva;
-                            if (estReserva === "Finalizada") {
-                                tipoExacto = "LIQUIDACIÓN CHECK-OUT";
-                            }
-
-                            // 2. Traer el Huésped real usando la columna correcta: nombres_apellidos
+                            // Traer el Huésped real
                             if (resData.id_huesped) {
                                 const { data: huespedData } = await supabase
                                     .from('huespedes')
@@ -324,12 +338,10 @@ function inicializarDashboard() {
                                     .eq('id', resData.id_huesped)
                                     .maybeSingle();
                                 
-                                if (huespedData) {
-                                    nombreHuesped = huespedData.nombres_apellidos;
-                                }
+                                if (huespedData) nombreHuesped = huespedData.nombres_apellidos;
                             }
 
-                            // 3. Traer el Número de la Habitación real
+                            // Traer el Número de la Habitación real
                             if (resData.id_habitacion) {
                                 const { data: habData } = await supabase
                                     .from('habitaciones')
@@ -337,27 +349,9 @@ function inicializarDashboard() {
                                     .eq('id', resData.id_habitacion)
                                     .maybeSingle();
                                 
-                                if (habData) {
-                                    numHabitacion = habData.numero || 'S/N';
-                                }
+                                if (habData) numHabitacion = habData.numero || 'S/N';
                             }
                         }
-
-                        // 4. Revisar si es un consumo específico para sustituir el texto
-                        const { data: consumos } = await supabase
-                            .from('consumos')
-                            .select('*') 
-                            .eq('id_reserva', idReserva);
-
-                        if (consumos && consumos.length > 0) {
-                            consumos.forEach(c => {
-                                const totalC = Number(c.total_consumo || 0);
-                                if (totalC === montoPago && montoPago > 0) {
-                                    tipoExacto = `CONSUMO: ${(c.descripcion || "Consumo").toUpperCase()}`;
-                                }
-                            });
-                        }
-
                     } catch (e) {
                         console.error("Error cruzando datos relacionales:", e);
                     }
@@ -365,15 +359,20 @@ function inicializarDashboard() {
 
                 const item = document.createElement('div');
                 item.className = "activity-item";
+                
+                // Estructura limpia e informativa para el Dashboard
                 item.innerHTML = `
                     <div class="activity-badge" style="background-color: #800020;"></div>
-                    <div class="activity-info">
-                        <p><strong>${nombreHuesped.toUpperCase()}</strong> - Hab. ${numHabitacion}</p>
-                        <small>
-                            <span class="badge-tipo" style="background: #fff5f5; color: #800020; padding: 2px 5px; border-radius: 4px; font-weight: bold; font-size: 10px; border: 1px solid #80002030;">
-                                ${tipoExacto}
-                            </span> | 
-                            <strong>S/ ${montoPago.toFixed(2)}</strong>
+                    <div class="activity-info" style="width: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <p style="margin: 0;"><strong>${nombreHuesped.toUpperCase()}</strong> - Hab. ${numHabitacion}</p>
+                            <span style="font-size: 11px; color: #666; font-weight: 500;">${fechaLimpia} | ${horaLimpia}</span>
+                        </div>
+                        <small style="display: block; margin-top: 4px;">
+                            <span class="badge-tipo" style="background: #fff5f5; color: #800020; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 10px; border: 1px solid #80002025;">
+                                ${conceptoReal} (${metodo})
+                            </span> 
+                            <span style="margin-left: 5px; font-weight: bold; color: #333;">S/ ${montoPago.toFixed(2)}</span>
                         </small>
                     </div>`;
                 list.appendChild(item);
@@ -428,7 +427,7 @@ function inicializarDashboard() {
         .subscribe();
 }
 
-// --- 5. ENLACE DE LOGOUT SEGURO CON LIMPIEZA ---
+// --- 5. ENLACE DE LOGOUT SEGURO ---
 document.getElementById('btnLogout')?.addEventListener('click', () => {
     Swal.fire({
         title: '¿Cerrar sesión?',
