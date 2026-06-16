@@ -709,7 +709,6 @@ const escucharReservas = async () => {
             const tr = document.createElement("tr");
             tr.className = "border-b border-gray-100 hover:bg-gray-50 transition-colors";
             
-            // 🔄 FILA HTML ACTUALIZADA: Se añadió la sección de niños en la primera celda
             tr.innerHTML = `
         <td class="p-3">
             <div class="font-bold text-gray-800">${res.huespedes?.nombres_apellidos || 'Sin Nombre'}</div>

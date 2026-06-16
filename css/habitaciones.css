@@ -276,6 +276,20 @@ body {
     border-color: #d4a017;
 }
 
+/* Diferenciación visual de Alerta para habitaciones que deben salir hoy y tienen saldo */
+.hab-card.ocupada.deuda-pendiente {
+    border-bottom: 5px solid #800020; /* Borde inferior Rojo Vino */
+    background: #fff5f5; /* Tono de fondo sutil rojizo para alertar */
+}
+
+.hab-card.ocupada.deuda-pendiente .hab-header {
+    background: #800020 !important; /* Cabecera cambia a rojo vino */
+}
+
+.hab-card.ocupada.deuda-pendiente .hab-icon {
+    color: #800020 !important; /* El icono del huésped cambia a rojo vino */
+}
+
 /* 5. MODAL DE RESERVAS (ESTRUCTURA OPTIMIZADA CERO-SCROLL) */
 .modal-reserva-overlay {
     display: none;

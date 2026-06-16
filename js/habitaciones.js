@@ -109,6 +109,7 @@ function configurarRackTiempoReal() {
         })
         .subscribe();
 }
+
 async function actualizarTableroRack() {
     try {
         // 🏨 CONTROL HORARIO UNIFICADO (TRUCO DE LA MADRUGADA HOTELERA)
@@ -150,9 +151,10 @@ async function actualizarTableroRack() {
         // ==========================================================================
         // 2. BUSCAR RESERVAS ACTIVAS (CONFIRMADAS O EN CURSO)
         // ==========================================================================
+        // 🌟 CAMBIO ESENCIAL 1: Añadimos 'tarifa_pactada' y 'AdelantoMonto' a la selección de campos
         const { data: reservasHoy, error: errRes } = await supabase
             .from('reservas')
-            .select('id, id_habitacion, check_in_fecha, check_out_fecha, cargo_early_checkin, cargo_late_checkout, estado_reserva, numero_personas, tiene_early_checkin, tiene_late_checkout')
+            .select('id, id_habitacion, check_in_fecha, check_out_fecha, tarifa_pactada, AdelantoMonto, cargo_early_checkin, cargo_late_checkout, estado_reserva, numero_personas, tiene_early_checkin, tiene_late_checkout')
             .in('estado_reserva', ['Confirmada', 'En Curso']); 
 
         if (errRes) throw errRes;
@@ -171,6 +173,21 @@ async function actualizarTableroRack() {
                         return; 
                     }
 
+                    // 🧮 CAMBIO ESENCIAL 2: Calcular el saldo de la reserva de forma rápida
+                    const fIn = new Date(res.check_in_fecha);
+                    const fOut = new Date(res.check_out_fecha);
+                    const noches = Math.ceil(Math.abs(fOut - fIn) / (1000 * 60 * 60 * 24)) || 1;
+                    
+                    const costoHospedaje = (parseFloat(res.tarifa_pactada) || 0) * noches;
+                    const cargoEarly = res.tiene_early_checkin ? (parseFloat(res.cargo_early_checkin) || 0) : 0;
+                    const cargoLate = res.tiene_late_checkout ? (parseFloat(res.cargo_late_checkout) || 0) : 0;
+                    const totalAbonado = parseFloat(res.AdelantoMonto) || 0;
+
+                    const saldoNeto = (costoHospedaje + cargoEarly + cargoLate) - totalAbonado;
+
+                    // 🚨 Determinar si es HOY su salida, el huésped sigue hospedado ('En Curso') y mantiene saldo pendiente
+                    const deudaCheckOut = (res.check_out_fecha === hoy) && (res.estado_reserva === 'En Curso') && (saldoNeto > 0);
+
                     // 🚨 REGLAS DE MAPEADO HORARIO DE RACK ACORDES AL HOTEL
 
                     // Caso 1: La reserva ya está ocupando el cuarto ('En Curso')
@@ -182,7 +199,8 @@ async function actualizarTableroRack() {
                             estado: res.estado_reserva,
                             checkIn: res.check_in_fecha,
                             numeroPersonas: parseInt(res.numero_personas) || 1,
-                            forzarEntrada: true
+                            forzarEntrada: true,
+                            deudaCritica: deudaCheckOut // 👈 Guardamos el estado de alerta
                         };
                     } 
                     // Caso 2: Reservas del día contable actual
@@ -194,7 +212,8 @@ async function actualizarTableroRack() {
                             estado: res.estado_reserva,
                             checkIn: res.check_in_fecha,
                             numeroPersonas: parseInt(res.numero_personas) || 1,
-                            forzarEntrada: true 
+                            forzarEntrada: true,
+                            deudaCritica: deudaCheckOut
                         };
                     } 
                     // Caso 3: Es de madrugada y la reserva pertenece al día real que figura en el calendario
@@ -206,7 +225,8 @@ async function actualizarTableroRack() {
                             estado: res.estado_reserva,
                             checkIn: res.check_in_fecha,
                             numeroPersonas: parseInt(res.numero_personas) || 1,
-                            forzarEntrada: true
+                            forzarEntrada: true,
+                            deudaCritica: deudaCheckOut
                         };
                     }
                 }
@@ -233,8 +253,13 @@ async function actualizarTableroRack() {
 
             // 🎛️ CONTROL DE ETIQUETAS VISUALES EN LA CARD
             if (est === "Ocupada" || est === "En Curso") {
-                // Solo si está ocupada y se le configuró Late Check-Out se renderiza
-                if (infoReserva && infoReserva.tieneLate) {
+                // 🌟 CAMBIO ESENCIAL 3: Si se detecta la alerta, renderiza un tag personalizado visible
+                if (infoReserva && infoReserva.deudaCritica) {
+                    htmlAvisos = `
+                        <div class="tag-rack checkout-rojo" style="background: #ffebee; color: #800020; font-size: 10px; font-weight: 900; padding: 2px 4px; border-radius: 4px; margin-top: 4px; border: 1px solid #800020; display: inline-block;">
+                            ⚠️ CHECKOUT CON DEUDA
+                        </div>`;
+                } else if (infoReserva && infoReserva.tieneLate) {
                     htmlAvisos = `
                         <div class="tag-rack late" style="background: #fff3e0; color: #e65100; font-size: 10px; font-weight: 800; padding: 2px 4px; border-radius: 4px; margin-top: 4px; border: 1px solid #ffcc80; display: inline-block;">
                             <i class="fa-regular fa-clock"></i> LATE CHECK-OUT
@@ -261,7 +286,13 @@ async function actualizarTableroRack() {
             
             const card = document.createElement('div');
             const claseEstadoCss = est.toLowerCase().replace(/\s+/g, '-');
-            card.className = `hab-card ${claseEstadoCss}`;
+            
+            // 🌟 CAMBIO ESENCIAL 4: Si tiene la deuda activa, inyectamos la clase 'deuda-pendiente' a la tarjeta
+            if (infoReserva && infoReserva.deudaCritica && (est === "Ocupada" || est === "En Curso")) {
+                card.className = `hab-card ${claseEstadoCss} deuda-pendiente`;
+            } else {
+                card.className = `hab-card ${claseEstadoCss}`;
+            }
             
             // Inyectamos el ID de reserva en el dataset del elemento HTML si existe una activa
             if (infoReserva) {
@@ -675,6 +706,7 @@ async function modalCheckInDirecto(hab) {
 
         if (elDif) elDif.value = (totalFinalMostrado - adelanto).toFixed(2);
     };
+
     // --- GUARDADO ATÓMICO CON DOBLE ACTUALIZACIÓN ---
     if (form) {
         form.onsubmit = async (e) => {
@@ -739,7 +771,9 @@ async function modalCheckInDirecto(hab) {
                         medio_reserva: 'Presencial', 
                         estado_reserva: 'En Curso',  
                         numero_personas: nPersonasFormulario, 
-                        notas: getVal('resObservaciones') || ''
+                        notas: getVal('resObservaciones') || '',
+                        tiene_ninos: isChecked('resAplicaNinos'),
+                        informacion_ninos: getVal('resInformacionNinos') || null
                     }])
                     .select().single();
 
@@ -1168,8 +1202,8 @@ async function abrirModalGestionOcupada(hab) {
                                 <p class="text-obs">${reserva.notas ? `"${reserva.notas}"` : 'Sin notas adicionales.'}</p>
                             </div>
                             <div class="ficha-col">
-                                <label><i class="fas fa-user-edit"></i></label>
-                                <p class="val-audit"></p>
+                                <label><i class="fas fa-user-edit"></i> Información de niños</label>
+                                <p class="val-audit">${reserva.informacion_ninos || 'Sin información de niños.'}</p>
                             </div>
                             <div class="ficha-col">
                                 <label><i class="fas fa-id-badge"></i> Registrado por:</label>
@@ -1180,8 +1214,8 @@ async function abrirModalGestionOcupada(hab) {
 
                     <div class="consumos-section">
                         <div class="section-title">
-                            <span><i class="fas fa-utensils"></i> CONSUMOS ADICIONALES (TIENDA / CAFETERÍA)</span>
-                            <button id="btnAddConsumo" class="btn-agregar-sm">+ CARGAR ITEM</button>
+                            <span><i class="fas fa-utensils"></i> CONSUMOS ADICIONALES (TIENDA / CAFETERÍA / OTROS)</span>
+                            <button id="btnAddConsumo" class="btn-agregar-sm">CARGAR ITEM</button>
                         </div>
                         
                         <div class="lista-consumos">
@@ -1198,6 +1232,9 @@ async function abrirModalGestionOcupada(hab) {
                     </div>
 
                     <div class="gestion-container-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                        <button id="btnCambiarHabitacion" style="padding: 10px 15px; background: #d4a017; color: #000; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-exchange-alt"></i> CAMBIAR HABITACIÓN
+                        </button>
                         <button id="btnCerrarModal" class="btn-secundario">CERRAR PANEL</button>
                         <button id="btnFinalizarOut" class="btn-checkout-final">🏁 PROCESAR CHECK-OUT</button>
                     </div>
@@ -1220,6 +1257,11 @@ async function abrirModalGestionOcupada(hab) {
                 };
                 
                 document.getElementById('btnGestionarPagos').onclick = () => abrirModalHistorialPagos(reserva, hab);
+
+                // Asignación de evento para disparar el flujo del selector de cambio
+                document.getElementById('btnCambiarHabitacion').onclick = () => {
+                    solicitarNuevaHabitacion(reserva.id, hab.id, hab.numero);
+                };
             }
         });
     } catch (error) {
@@ -1228,6 +1270,83 @@ async function abrirModalGestionOcupada(hab) {
     }
 }
 
+/* ==========================================================================
+   FUNCIÓN COMPLEMENTARIA: BUSQUEDA DE DISPONIBLES Y CAMBIO TRANSACCIONAL
+   ========================================================================== */
+async function solicitarNuevaHabitacion(reservaId, habActualId, numeroActual) {
+    try {
+        // Consultar únicamente habitaciones con estado libre
+        const { data: disponibles, error } = await supabase
+            .from('habitaciones')
+            .select('id, numero, tipo')
+            .eq('estado', 'Libre')
+            .order('numero', { ascending: true });
+
+        if (error) throw error;
+
+        if (!disponibles || disponibles.length === 0) {
+            Swal.fire('Rack Completo', 'No existen habitaciones libres en este momento para realizar el traslado.', 'warning');
+            return;
+        }
+
+        // Generar las opciones del selector
+        let opcionesSelect = disponibles.map(h => `<option value="${h.id}">Habitación ${h.numero} (${h.tipo || 'Boutique'})</option>`).join('');
+
+        const { value: nuevaHabIdSelected } = await Swal.fire({
+            title: 'Cambio de Habitación',
+            html: `
+                <div style="text-align: left; font-family: sans-serif;">
+                    <p style="font-size: 14px; color:#555;">Selecciona la habitación destino para transferir al huésped desde la <b>${numeroActual}</b>:</p>
+                    <select id="selectNuevaHab" class="swal2-input" style="width: 100%; margin: 10px 0; font-size: 14px;">
+                        ${opcionesSelect}
+                    </select>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonColor: '#800020', // Tono wine-red corporativo
+            cancelButtonColor: '#7d6c57',
+            confirmButtonText: 'CONFIRMAR TRASLADO',
+            cancelButtonText: 'CANCELAR',
+            focusConfirm: false,
+            preConfirm: () => {
+                return document.getElementById('selectNuevaHab').value;
+            }
+        });
+
+        if (!nuevaHabIdSelected) return;
+
+        const habDestinoInfo = disponibles.find(h => h.id == nuevaHabIdSelected);
+
+        Swal.fire({ title: 'Actualizando Rack...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+        // Ejecución secuencial de estados en Supabase
+        // 1. Habitación de origen pasa a Limpieza
+        await supabase.from('habitaciones').update({ estado: 'Limpieza' }).eq('id', habActualId);
+        // 2. Nueva habitación pasa a Ocupada
+        await supabase.from('habitaciones').update({ estado: 'Ocupado' }).eq('id', nuevaHabIdSelected);
+        // 3. Se reasigna el id_habitacion en la reserva activa
+        await supabase.from('reservas').update({ id_habitacion: nuevaHabIdSelected }).eq('id', reservaId);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Traslado Completado',
+            text: `Huésped asignado a la Habitación ${habDestinoInfo.numero} correctamente.`,
+            timer: 1500,
+            showConfirmButton: false
+        });
+
+        // Forzar actualización inmediata de los componentes y las cards del Rack
+        setTimeout(() => {
+            if (typeof inicializarDashboard === 'function') inicializarDashboard();
+            else if (typeof cargarHabitaciones === 'function') cargarHabitaciones();
+            else window.location.reload();
+        }, 300);
+
+    } catch (err) {
+        console.error("Error ejecutando traslado:", err);
+        Swal.fire('Error', 'Error interno al procesar el cambio de habitación.', 'error');
+    }
+}
 /* ==========================================================================
    5.1. HISTORIAL Y REGISTRO DE ABONOS (CORREGIDO Y BLINDADO CONTRA DESFASES)
    ========================================================================== */
@@ -1781,6 +1900,7 @@ async function realizarCheckOut(resId, hab, rData, saldoNetoPendiente, totalCons
         Swal.fire('Error', 'No se pudieron actualizar los datos.', 'error');
     }
 }
+
 /* ==========================================================================
    IMPRESIÓN DE TICKET TÉRMICO (80MM) - DESGLOSADO Y COMPLETO
    ========================================================================== */
@@ -2029,10 +2149,10 @@ async function abrirModalGestionLimpieza(hab) {
    ========================================================================== */
 async function liberarHabitacion(habId, numeroHab) {
     try {
-        // Hacemos el update directo en Supabase
+        
         const { error } = await supabase
             .from('habitaciones')
-            .update({ estado: 'Libre' }) // Asegúrate de que en tu BD el string exacto sea 'Disponible' o 'Libre'
+            .update({ estado: 'Libre' }) 
             .eq('id', habId);
 
         if (error) throw error;
@@ -2041,13 +2161,11 @@ async function liberarHabitacion(habId, numeroHab) {
         Swal.fire({
             icon: 'success',
             title: `Habitación ${numeroHab} Liberada`,
-            text: 'El estado cambió a Disponible con éxito.',
+            text: 'El estado cambió a LIBRE con éxito.',
             timer: 1500,
             showConfirmButton: false
         });
 
-        // Refrescar el Rack en tiempo real
-        // Reemplaza 'inicializarDashboard' por el nombre de tu función que recarga el Rack si es diferente
         setTimeout(() => {
             if (typeof inicializarDashboard === 'function') {
                 inicializarDashboard();
@@ -2059,7 +2177,7 @@ async function liberarHabitacion(habId, numeroHab) {
         }, 400);
 
     } catch (error) {
-        console.error("Error al cambiar estado a Disponible:", error);
+        console.error("Error al cambiar estado a LIBRE:", error);
         Swal.fire('Error de Sistema', 'No se pudo actualizar el estado en la base de datos.', 'error');
     }
 }
