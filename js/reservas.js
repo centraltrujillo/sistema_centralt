@@ -557,7 +557,7 @@ if (!nombresApellidos) {
                     moneda: "PEN",                    
                     tipo_cambio_usado: 1.000,                
                     monto_soles: montoFormatSoles,    
-                    adelanto_monto: adelantoMonto,     
+                    monto_recibido: adelantoMonto,     
                     metodo_pago: metodoPagoSeleccionado, 
                     concepto: 'Adelanto',
                     nro_operacion: adelantoDetalle,
@@ -637,7 +637,7 @@ const escucharReservas = async () => {
                 *,
                 huespedes ( nombres_apellidos, documento_num, documento_tipo, telefono, correo, nacionalidad, fecha_nacimiento, ciudad, preferencias ),
                 habitaciones ( numero, tipo ),
-                pagos ( id, monto_soles, adelanto_monto, metodo_pago, nro_operacion )
+                pagos ( id, monto_soles, monto_recibido, metodo_pago, nro_operacion )
             `)
             .order("created_at", { ascending: false });
 
@@ -924,12 +924,12 @@ window.prepararEdicion = async (id) => {
 
         // Configuración Segura de Adelantos
         const pagoAdelanto = (res.pagos && Array.isArray(res.pagos)) 
-            ? res.pagos.find(p => parseFloat(p.monto_soles) > 0 || parseFloat(p.adelanto_monto) > 0) 
+            ? res.pagos.find(p => parseFloat(p.monto_soles) > 0 || parseFloat(p.monto_recibido) > 0) 
             : null;
         
         if (inputAdelanto) {
             inputAdelanto.value = pagoAdelanto 
-                ? (pagoAdelanto.monto_soles || pagoAdelanto.adelanto_monto || "0.00") 
+                ? (pagoAdelanto.monto_soles || pagoAdelanto.monto_recibido || "0.00") 
                 : "0.00";
         }
         
@@ -1072,11 +1072,11 @@ window.exportarExcel = async () => {
                                           : parseFloat(r.cargo_late_checkout) || 0;
 
                         const pagoAdelanto = (r.pagos && Array.isArray(r.pagos)) 
-                            ? r.pagos.find(p => parseFloat(p.monto_soles) > 0 || parseFloat(p.adelanto_monto) > 0) 
+                            ? r.pagos.find(p => parseFloat(p.monto_soles) > 0 || parseFloat(p.monto_recibido) > 0) 
                             : null;
                         
                         // 🛠️ OPTIMIZACIÓN: Fallback matemático seguro para evitar errores de renderizado
-                        const valorMonto = pagoAdelanto ? (pagoAdelanto.monto_soles || pagoAdelanto.adelanto_monto || 0) : 0;
+                        const valorMonto = pagoAdelanto ? (pagoAdelanto.monto_soles || pagoAdelanto.monto_recibido || 0) : 0;
                         const montoAdelanto = parseFloat(valorMonto) || 0;
                             
                         const metodoPago = pagoAdelanto ? (pagoAdelanto.metodo_pago || '---') : '---';

@@ -2,21 +2,14 @@ import { client as supabase } from './config.js';
 
 let chartSemanal, chartMensual;
 
-// --- FUNCIONES DE APOYO CORREGIDAS ---
+// --- FUNCIONES DE APOYO ---
 function formatearFechaJS(fechaInput) {
     if (!fechaInput) return null;
     
     if (typeof fechaInput === 'string') {
-        const stringLimpio = fechaInput.trim();
-        
-        // Si es fecha pura de Postgres (YYYY-MM-DD), forzamos hora local para evitar el desfase UTC-5
-        if (stringLimpio.length === 10 && stringLimpio.includes("-")) {
-            return new Date(stringLimpio + "T00:00:00");
-        }
-        
-        // Si es un timestamp completo, cambiamos el espacio por T
-        const stringPostgres = stringLimpio.replace(" ", "T");
-        const d = new Date(stringPostgres);
+        // Reemplazar espacios por 'T' si viene de Postgres para garantizar compatibilidad universal
+        const stringLimpio = fechaInput.trim().replace(" ", "T");
+        const d = new Date(stringLimpio);
         return isNaN(d.getTime()) ? null : d;
     }
     
@@ -154,11 +147,11 @@ function inicializarDashboard() {
             const mesActual = ahora.getMonth();
             const anioActual = ahora.getFullYear();
 
-            // Configuración rígida de la semana actual (Lunes plano a las 00:00)
-            const inicioSemana = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+            // Inicio de la semana operativa (Lunes)
+            const inicioSemana = new Date(ahora);
             const diaHoy = inicioSemana.getDay(); 
-            const diff = (diaHoy === 0) ? 6 : diaHoy - 1; 
-            inicioSemana.setDate(inicioSemana.getDate() - diff);
+            const diff = inicioSemana.getDate() - diaHoy + (diaHoy === 0 ? -6 : 1); 
+            inicioSemana.setDate(diff);
             inicioSemana.setHours(0, 0, 0, 0);
 
             const fechaMesPasado = new Date();
@@ -167,8 +160,8 @@ function inicializarDashboard() {
             const anioPasado = fechaMesPasado.getFullYear();
 
             pagos.forEach(pago => {
-                // Estandarización de columnas según tu SQL
-                const monto = Number(pago.monto_soles || pago.adelanto_monto || 0);
+                // CORRECCIÓN: Usar exactamente 'monto_soles' o 'monto_recibido' de tu tabla SQL
+                const monto = Number(pago.monto_soles || pago.monto_recibido || 0);
                 const fechaRaw = pago.fecha_pago || pago.created_at;
                 const fechaObj = formatearFechaJS(fechaRaw);
                 
@@ -176,19 +169,13 @@ function inicializarDashboard() {
                     const m = fechaObj.getMonth();
                     const y = fechaObj.getFullYear();
                     
-                    // Clonamos fecha sin horas para la comparativa semanal limpia
-                    const fechaPagoPlana = new Date(fechaObj.getFullYear(), fechaObj.getMonth(), fechaObj.getDate());
-
                     // Filtro para Gráfico Semanal
-                    if (fechaPagoPlana >= inicioSemana) {
-                        const dia = fechaPagoPlana.getDay();
+                    if (fechaObj >= inicioSemana) {
+                        const dia = fechaObj.getDay();
                         const index = (dia === 0) ? 6 : dia - 1; 
-                        if (index >= 0 && index < 7) {
-                            ingresosSemana[index] += monto;
-                        }
+                        ingresosSemana[index] += monto;
                     }
 
-                    // Agrupación mensual corregida (Sin saltos de mes accidentales)
                     const keyMes = `${m}-${y}`;
                     ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
 
@@ -284,8 +271,7 @@ function inicializarDashboard() {
             console.error("Error al calcular reservas de hoy:", err.message);
         }
     }
-
-    // E. RENDERIZAR ACTIVIDAD RECIENTE (CON CONCEPTO REAL, FECHA Y HORA)
+// E. RENDERIZAR ACTIVIDAD RECIENTE (CON CONCEPTO REAL, FECHA Y HORA)
     async function renderizarActividadReciente() {
         const list = document.getElementById('list-checkins');
         if (!list) return;
@@ -318,7 +304,7 @@ function inicializarDashboard() {
 
                 let nombreHuesped = 'HUEŚPED';
                 let numHabitacion = 'S/N';
-                const montoPago = Number(pago.monto_soles || pago.adelanto_monto || 0);
+                const montoPago = Number(pago.monto_soles || pago.monto_recibido || 0);
 
                 if (idReserva) {
                     try {
@@ -427,7 +413,7 @@ function inicializarDashboard() {
         .subscribe();
 }
 
-// --- 5. ENLACE DE LOGOUT SEGURO ---
+// --- 5. ENLACE DE LOGOUT SEGURO CON LIMPIEZA ---
 document.getElementById('btnLogout')?.addEventListener('click', () => {
     Swal.fire({
         title: '¿Cerrar sesión?',

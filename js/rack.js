@@ -524,7 +524,7 @@ function configurarEventosFormulario() {
                 moneda: "PEN",                                      
                 tipo_cambio_usado: 1.000,                                   
                 monto_soles: adelantoMonto,                                
-                adelanto_monto: adelantoMonto,                              
+                monto_recibido: adelantoMonto,                              
                 metodo_pago: selectMetodoPago?.value || "Efectivo",
                 concepto: "Adelanto",
                 nro_operacion: inputAdelantoDetalle?.value || "",
@@ -1366,7 +1366,7 @@ const guardarReservaTransaccional = async (objetoReserva, objetoPago) => {
                     .eq("concepto", "Adelanto")
                     .maybeSingle();
 
-                const montoOriginal = objetoPago.adelanto_monto || objetoPago.monto_soles || 0;
+                const montoOriginal = objetoPago.monto_recibido || objetoPago.monto_soles || 0;
                 const montoEnSoles = objetoPago.monto_soles || montoOriginal;
                 const tcUsado = objetoPago.tipo_cambio_usado || 1.000;
 
@@ -1374,7 +1374,7 @@ const guardarReservaTransaccional = async (objetoReserva, objetoPago) => {
                     const { error: errorUpdatePago } = await supabase
                         .from("pagos")
                         .update({
-                            adelanto_monto: montoOriginal,
+                            monto_recibido: montoOriginal,
                             monto_soles: montoEnSoles,
                             tipo_cambio_usado: tcUsado,
                             metodo_pago: objetoPago.metodo_pago,
@@ -1398,7 +1398,7 @@ const guardarReservaTransaccional = async (objetoReserva, objetoPago) => {
                             fecha_pago: objetoPago.fecha_pago,
                             hora_pago: objetoPago.hora_pago, // Se añade la consistencia de la hora calculada
                             nombre_recepcionista: nombreRecepcionistaActivo,
-                            adelanto_monto: montoOriginal,
+                            monto_recibido: montoOriginal,
                             monto_soles: montoEnSoles,
                             tipo_cambio_usado: tcUsado,
                             moneda: 'PEN',
@@ -1454,7 +1454,7 @@ const guardarReservaTransaccional = async (objetoReserva, objetoPago) => {
 
             // Si se creó la reserva, insertamos el pago asociado
             if (nuevaReserva && objetoPago) {
-                const montoOriginal = objetoPago.adelanto_monto || objetoPago.monto_soles || 0;
+                const montoOriginal = objetoPago.monto_recibido || objetoPago.monto_soles || 0;
                 const montoEnSoles = objetoPago.monto_soles || montoOriginal;
                 const tcUsado = objetoPago.tipo_cambio_usado || 1.000;
 
@@ -1467,7 +1467,7 @@ const guardarReservaTransaccional = async (objetoReserva, objetoPago) => {
                         fecha_pago: objetoPago.fecha_pago,
                         hora_pago: objetoPago.hora_pago, // 🏨 Registra la hora exacta calculada del formulario
                         nombre_recepcionista: nombreRecepcionistaActivo,
-                        adelanto_monto: montoOriginal,
+                        monto_recibido: montoOriginal,
                         monto_soles: montoEnSoles,
                         tipo_cambio_usado: tcUsado,
                         moneda: 'PEN',
@@ -1722,7 +1722,7 @@ window.mostrarFichaReserva = async function(idReserva) {
                 *, 
                 huespedes (nombres_apellidos, documento_num, documento_tipo, telefono, correo, nacionalidad, ciudad, fecha_nacimiento, preferencias), 
                 habitaciones (numero, tipo),
-                pagos (id, adelanto_monto, monto_soles, moneda, metodo_pago, nro_operacion, concepto, nombre_recepcionista),
+                pagos (id, monto_recibido, monto_soles, moneda, metodo_pago, nro_operacion, concepto, nombre_recepcionista),
                 usuarios (usuario)
             `)
             .eq('id', idReserva)

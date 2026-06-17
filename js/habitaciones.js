@@ -160,7 +160,7 @@ async function actualizarTableroRack() {
         // Ejecutamos las consultas en paralelo para no ralentizar el Rack
         const [resReservas, resPagos] = await Promise.all([
             qReservas,
-            supabase.from('pagos').select('id_reserva, adelanto_monto') // 👈 Ajusta 'adelanto_monto' o el nombre exacto de la columna de dinero si varía
+            supabase.from('pagos').select('id_reserva, monto_recibido') // 👈 Ajusta 'monto_recibido' o el nombre exacto de la columna de dinero si varía
         ]);
 
         if (resReservas.error) throw resReservas.error;
@@ -174,7 +174,7 @@ async function actualizarTableroRack() {
         listaPagos.forEach(p => {
             if (p.id_reserva) {
                 // Sumamos todos los abonos que pertenezcan a la misma reserva
-                mapaPagos[p.id_reserva] = (mapaPagos[p.id_reserva] || 0) + (parseFloat(p.adelanto_monto) || 0);
+                mapaPagos[p.id_reserva] = (mapaPagos[p.id_reserva] || 0) + (parseFloat(p.monto_recibido) || 0);
             }
         });
 
@@ -854,7 +854,7 @@ if (adelanto > 0) {
             id_usuario: idUsuarioActivo,
             turno: turnoCalculado || turnoActivo, 
             nombre_recepcionista: nombreRecepcionista,
-            adelanto_monto: adelanto,           
+            monto_recibido: adelanto,           
             moneda: "PEN",                      
             tipo_cambio_usado: 1.000,           
             monto_soles: adelanto,              
@@ -1070,7 +1070,7 @@ async function abrirModalGestionOcupada(hab) {
         // ==========================================================================
         const { data: pagosRegistrados, error: errSumPagos } = await supabase
             .from('pagos')
-            .select('adelanto_monto, monto_soles, concepto')
+            .select('monto_recibido, monto_soles, concepto')
             .eq('id_reserva', reserva.id);
 
         if (errSumPagos) throw errSumPagos;
@@ -1078,7 +1078,7 @@ async function abrirModalGestionOcupada(hab) {
         const totalAbonadoHospedaje = pagosRegistrados 
             ? pagosRegistrados
                 .filter(p => p.concepto !== 'Consumo') 
-                .reduce((acc, p) => acc + (parseFloat(p.monto_soles || p.adelanto_monto) || 0), 0) 
+                .reduce((acc, p) => acc + (parseFloat(p.monto_soles || p.monto_recibido) || 0), 0) 
             : 0;
 
         // ==========================================================================
@@ -1386,7 +1386,7 @@ async function abrirModalHistorialPagos(reserva, hab) {
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px;">
                     <span><b style="color: #800020;">#${i+1}</b> ${new Date(p.created_at).toLocaleDateString('es-PE')}</span>
                     <span style="color: #666; font-size: 11px;">${p.metodo_pago} ${p.nombre_recepcionista ? `(${p.nombre_recepcionista})` : ''} - <small>${p.concepto || 'Abono'}</small></span>
-                    <span style="font-weight: bold; color: #27ae60;">S/ ${parseFloat(p.monto_soles || p.adelanto_monto).toFixed(2)}</span>
+                    <span style="font-weight: bold; color: #27ae60;">S/ ${parseFloat(p.monto_soles || p.monto_recibido).toFixed(2)}</span>
                 </div>
             `).join('')
             : '<p style="text-align:center; color:#999; padding:10px;">No hay abonos registrados.</p>';
@@ -1486,7 +1486,7 @@ async function abrirModalHistorialPagos(reserva, hab) {
                     id_usuario: idUsuarioActivo,
                     turno: turnoCalculado,
                     nombre_recepcionista: nombreRecepcionista,
-                    adelanto_monto: nuevoAbono.monto,
+                    monto_recibido: nuevoAbono.monto,
                     moneda: 'PEN', 
                     tipo_cambio_usado: 1.000, 
                     monto_soles: nuevoAbono.monto,
@@ -1703,7 +1703,7 @@ async function agregarConsumo(resId, hab) {
                         id_usuario: idUsuarioActivo,
                         turno: turnoCalculado, // Asigna dinámicamente el turno correcto según la hora real
                         nombre_recepcionista: nombreRecepcionista,
-                        adelanto_monto: montoCalculado,
+                        monto_recibido: montoCalculado,
                         moneda: 'PEN',
                         tipo_cambio_usado: 1.000, 
                         monto_soles: montoCalculado,
@@ -1766,7 +1766,7 @@ async function realizarCheckOut(resId, hab, rData, saldoNetoPendiente, totalCons
         }
     } catch (e) {
         console.warn("No se pudo calcular los abonos históricos desde la tabla pagos:", e);
-        totalAbonosHistoricos = parseFloat(rData.AdelantoMonto || rData.adelanto_monto || 0);
+        totalAbonosHistoricos = parseFloat(rData.AdelantoMonto || rData.monto_recibido || 0);
     }
 
     // Interfaz dinámica simplificada para SweetAlert2 (Con los estilos de Hotel Central)
@@ -1872,7 +1872,7 @@ async function realizarCheckOut(resId, hab, rData, saldoNetoPendiente, totalCons
                     id_usuario: idUsuarioActivo,
                     turno: turnoCalculado, // Dinámico y auditado
                     nombre_recepcionista: nombreResponsable,
-                    adelanto_monto: granTotalAPagar, 
+                    monto_recibido: granTotalAPagar, 
                     moneda: rData.moneda || 'PEN',
                     tipo_cambio_usado: parseFloat(rData.tipo_cambio) || 1.000,
                     monto_soles: granTotalAPagar,
