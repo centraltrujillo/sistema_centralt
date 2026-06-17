@@ -83,7 +83,7 @@ function inicializarGraficos() {
     if (elSemanal) {
         chartSemanal = new ApexCharts(elSemanal, {
             chart: { type: 'area', height: 250, toolbar: { show: false }, zoom: { enabled: false } },
-            series: [{ name: 'Ingresos S/', data: [0, 0, 0, 0, 0, 0, 0] }],
+            series: [{ name: 'Ingresos Totales S/', data: [0, 0, 0, 0, 0, 0, 0] }],
             xaxis: { categories: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom'] },
             yaxis: {
                 labels: { formatter: (value) => `S/ ${value.toFixed(0)}` },
@@ -105,7 +105,7 @@ function inicializarGraficos() {
             yaxis: {
                 labels: { formatter: (value) => `S/ ${value >= 1000 ? (value/1000).toFixed(1) + 'k' : value.toFixed(0)}` }
             },
-            series: [{ name: 'Ingresos S/', data: Array(12).fill(0) }],
+            series: [{ name: 'Ingresos Totales S/', data: Array(12).fill(0) }],
             xaxis: { 
                 categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
                 labels: { style: { fontSize: '10px' } }
@@ -127,16 +127,22 @@ function inicializarGraficos() {
 function inicializarDashboard() {
     inicializarGraficos();
 
-    // A. ESCUCHADOR DE PAGOS E INGRESOS (PROCESADOR DE KPI Y GRÁFICOS)
-    async function cargarYProcesarPagos() {
+    // A. PROCESADOR UNIFICADO DE KPI Y GRÁFICOS (PAGOS + CONSUMOS PAGADOS)
+    async function cargarYProcesarFinanzas() {
         try {
-            const { data: pagos, error } = await supabase
-                .from('pagos')
-                .select('*');
+            // Hacemos consultas en paralelo para mejorar los tiempos de carga en el Dashboard
+            const [respuestaPagos, respuestaConsumos] = await Promise.all([
+                supabase.from('pagos').select('*'),
+                supabase.from('consumos').select('*').eq('estado_pago', 'Pagado')
+            ]);
 
-            if (error) throw error;
-            
-            console.log("📊 Datos crudos de pagos recibidos de Supabase:", pagos);
+            if (respuestaPagos.error) throw respuestaPagos.error;
+            if (respuestaConsumos.error) throw respuestaConsumos.error;
+
+            const pagos = respuestaPagos.data || [];
+            const consumos = respuestaConsumos.data || [];
+
+            console.log("📊 Datos unificados para balance diario:", { pagos, consumos });
 
             let ingresosSemana = [0, 0, 0, 0, 0, 0, 0];
             let ingresosPorMes = {}; 
@@ -147,7 +153,7 @@ function inicializarDashboard() {
             const mesActual = ahora.getMonth();
             const anioActual = ahora.getFullYear();
 
-            // Inicio de la semana operativa (Lunes)
+            // Configurar el inicio de la semana operativa (Lunes)
             const inicioSemana = new Date(ahora);
             const diaHoy = inicioSemana.getDay(); 
             const diff = inicioSemana.getDate() - diaHoy + (diaHoy === 0 ? -6 : 1); 
@@ -159,9 +165,9 @@ function inicializarDashboard() {
             const mesPasado = fechaMesPasado.getMonth();
             const anioPasado = fechaMesPasado.getFullYear();
 
+            // 1. Procesar ingresos desde la tabla "pagos"
             pagos.forEach(pago => {
-                // CORRECCIÓN: Usar exactamente 'monto_soles' o 'monto_recibido' de tu tabla SQL
-                const monto = Number(pago.monto_soles || pago.monto_recibido || 0);
+                const monto = Number(pago.monto_soles || 0);
                 const fechaRaw = pago.fecha_pago || pago.created_at;
                 const fechaObj = formatearFechaJS(fechaRaw);
                 
@@ -169,13 +175,14 @@ function inicializarDashboard() {
                     const m = fechaObj.getMonth();
                     const y = fechaObj.getFullYear();
                     
-                    // Filtro para Gráfico Semanal
+                    // Sumar al gráfico Semanal
                     if (fechaObj >= inicioSemana) {
                         const dia = fechaObj.getDay();
                         const index = (dia === 0) ? 6 : dia - 1; 
                         ingresosSemana[index] += monto;
                     }
 
+                    // Sumar a la comparativa mensual
                     const keyMes = `${m}-${y}`;
                     ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
 
@@ -184,7 +191,34 @@ function inicializarDashboard() {
                 }
             });
 
-            // Forzar actualización de la UI del KPI Ingresos Mensuales
+            // 2. Procesar ingresos desde la tabla "consumos" (Sólo los 'Pagado')
+            consumos.forEach(consumo => {
+                const monto = Number(consumo.total_consumo || 0);
+                // Si tu tabla consumos usa otra columna de fecha como 'fecha_venta', cámbiala aquí
+                const fechaRaw = consumo.created_at; 
+                const fechaObj = formatearFechaJS(fechaRaw);
+
+                if (fechaObj) {
+                    const m = fechaObj.getMonth();
+                    const y = fechaObj.getFullYear();
+                    
+                    // Sumar al gráfico Semanal
+                    if (fechaObj >= inicioSemana) {
+                        const dia = fechaObj.getDay();
+                        const index = (dia === 0) ? 6 : dia - 1; 
+                        ingresosSemana[index] += monto;
+                    }
+
+                    // Sumar a la comparativa mensual
+                    const keyMes = `${m}-${y}`;
+                    ingresosPorMes[keyMes] = (ingresosPorMes[keyMes] || 0) + monto;
+
+                    if (m === mesActual && y === anioActual) totalMesActual += monto;
+                    if (m === mesPasado && y === anioPasado) totalMesAnterior += monto;
+                }
+            });
+
+            // Forzar actualización de la UI del KPI Ingresos Mensuales Unificados
             const elKpiIngresos = document.getElementById('kpi-ingresos');
             if (elKpiIngresos) {
                 elKpiIngresos.innerText = `S/ ${totalMesActual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -192,19 +226,21 @@ function inicializarDashboard() {
             
             actualizarTendencia(totalMesActual, totalMesAnterior, 'trend-ingresos');
 
+            // Actualizar Gráfico Lineal/Área Semanal
             if (chartSemanal) {
-                chartSemanal.updateSeries([{ name: 'Ingresos S/', data: ingresosSemana }]);
+                chartSemanal.updateSeries([{ name: 'Ingresos Totales S/', data: ingresosSemana }]);
             }
 
+            // Actualizar Gráfico de Barras Mensual
             if (chartMensual) {
                 const mesesData = [];
                 for (let m = 0; m <= 11; m++) {
                     mesesData.push(ingresosPorMes[`${m}-${anioActual}`] || 0);
                 }
-                chartMensual.updateSeries([{ name: 'Ingresos S/', data: mesesData }]);
+                chartMensual.updateSeries([{ name: 'Ingresos Totales S/', data: mesesData }]);
             }
         } catch (err) {
-            console.error("Error crítico en procesamiento de KPI ingresos:", err.message);
+            console.error("Error crítico en procesamiento unificado de finanzas:", err.message);
         }
     }
 
@@ -271,7 +307,8 @@ function inicializarDashboard() {
             console.error("Error al calcular reservas de hoy:", err.message);
         }
     }
-// E. RENDERIZAR ACTIVIDAD RECIENTE (CON CONCEPTO REAL, FECHA Y HORA)
+
+    // E. RENDERIZAR ACTIVIDAD RECIENTE 
     async function renderizarActividadReciente() {
         const list = document.getElementById('list-checkins');
         if (!list) return;
@@ -284,7 +321,7 @@ function inicializarDashboard() {
                 .limit(5);
 
             if (errPagos || !pagosRecientes || pagosRecientes.length === 0) {
-                list.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">No hay pagos registrados hoy.</p>';
+                list.innerHTML = '<p style="text-align: center; color: #888; padding: 20px;">No hay movimientos recientes.</p>';
                 return;
             }
 
@@ -292,23 +329,17 @@ function inicializarDashboard() {
 
             for (const pago of pagosRecientes) {
                 const idReserva = pago.id_reserva;
-                
-                // 1. Obtener el concepto directo de la base de datos (Ej: Adelanto, Saldo, Consumo...)
                 const conceptoReal = pago.concepto ? pago.concepto.toUpperCase() : "PAGO";
                 const metodo = pago.metodo_pago || "Efectivo";
-                
-                // 2. Extraer y formatear Fecha (YYYY-MM-DD) y Hora (HH:MM:SS)
-                const fechaLimpia = pago.fecha_pago; // Formato string directo "2026-06-11"
-                // Cortamos los segundos de la hora para que se vea más limpio (Ej: "13:20")
+                const fechaLimpia = pago.fecha_pago; 
                 const horaLimpia = pago.hora_pago ? pago.hora_pago.substring(0, 5) : "00:00"; 
 
-                let nombreHuesped = 'HUEŚPED';
+                let nombreHuesped = 'HUESPED';
                 let numHabitacion = 'S/N';
                 const montoPago = Number(pago.monto_soles || pago.monto_recibido || 0);
 
                 if (idReserva) {
                     try {
-                        // Traer la Reserva para obtener las llaves relacionales
                         const { data: resData } = await supabase
                             .from('reservas')
                             .select('id_huesped, id_habitacion')
@@ -316,7 +347,6 @@ function inicializarDashboard() {
                             .maybeSingle();
 
                         if (resData) {
-                            // Traer el Huésped real
                             if (resData.id_huesped) {
                                 const { data: huespedData } = await supabase
                                     .from('huespedes')
@@ -327,7 +357,6 @@ function inicializarDashboard() {
                                 if (huespedData) nombreHuesped = huespedData.nombres_apellidos;
                             }
 
-                            // Traer el Número de la Habitación real
                             if (resData.id_habitacion) {
                                 const { data: habData } = await supabase
                                     .from('habitaciones')
@@ -346,7 +375,6 @@ function inicializarDashboard() {
                 const item = document.createElement('div');
                 item.className = "activity-item";
                 
-                // Estructura limpia e informativa para el Dashboard
                 item.innerHTML = `
                     <div class="activity-badge" style="background-color: #800020;"></div>
                     <div class="activity-info" style="width: 100%;">
@@ -368,22 +396,30 @@ function inicializarDashboard() {
         }
     }
 
-    // --- Carga inicial sincronizada ---
-    cargarYProcesarPagos();
+    // --- Carga inicial unificada ---
+    cargarYProcesarFinanzas();
     calcularOcupacionReal();
     contarHuespedes();
     calcularReservasHoy();
     renderizarActividadReciente();
 
     // ==========================================================================
-    // ⚡ CANALES REALTIME DE SUPABASE
+    // ⚡ CANALES REALTIME DE SUPABASE (CON ESCUCHADOR EN CONSUMOS TAMBIÉN)
     // ==========================================================================
     supabase
         .channel('realtime-pagos')
         .on('postgres_changes', { event: '*', pattern: 'public', table: 'pagos' }, () => {
             console.log('🔄 Actualización en tabla Pagos detectada...');
-            cargarYProcesarPagos();
+            cargarYProcesarFinanzas();
             renderizarActividadReciente();
+        })
+        .subscribe();
+
+    supabase
+        .channel('realtime-consumos')
+        .on('postgres_changes', { event: '*', pattern: 'public', table: 'consumos' }, () => {
+            console.log('🔄 Actualización en tabla Consumos detectada...');
+            cargarYProcesarFinanzas();
         })
         .subscribe();
 
@@ -413,7 +449,7 @@ function inicializarDashboard() {
         .subscribe();
 }
 
-// --- 5. ENLACE DE LOGOUT SEGURO CON LIMPIEZA ---
+// --- 5. ENLACE DE LOGOUT SEGURO ---
 document.getElementById('btnLogout')?.addEventListener('click', () => {
     Swal.fire({
         title: '¿Cerrar sesión?',
