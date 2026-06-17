@@ -7,6 +7,7 @@
     display: flex;
     gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .input-reporte-date {
@@ -14,7 +15,7 @@
     padding: 8px 12px;
     border-radius: 6px;
     font-family: 'Lato', sans-serif;
-    font-size: 14px;
+    font-size: 14px; /* Enlaces y navegación base */
     color: #334155;
     outline: none;
     background-color: #ffffff;
@@ -26,53 +27,87 @@
     box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
 }
 
-/* --- Botones Dinámicos de Estado de Caja --- */
+/* --- Botones Dinámicos del Módulo --- */
+.btn-reporte-success,
+.btn-reporte-danger,
+.btn-reporte-info,
+.btn-reporte-primary {
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    font-size: 13px; /* Botones secundarios y cierres */
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
 .btn-reporte-success {
     background-color: #27ae60;
     color: #ffffff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-family: 'Lato', sans-serif;
-    font-weight: 700;
-    font-size: 13px; /* Especificación profesional para botones secundarios */
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: background-color 0.2s, transform 0.1s;
 }
-
-.btn-reporte-success:hover {
-    background-color: #1e8449;
-}
-
-.btn-reporte-success:active {
-    transform: scale(0.98);
-}
+.btn-reporte-success:hover { background-color: #1e8449; }
 
 .btn-reporte-danger {
+    background-color: #e11d48;
+    color: #ffffff;
+}
+.btn-reporte-danger:hover { background-color: #be123c; }
+
+.btn-reporte-info {
+    background-color: var(--ochre-gold);
+    color: #ffffff;
+}
+.btn-reporte-info:hover { background-color: #b38410; }
+
+.btn-reporte-primary {
     background-color: var(--vino-tinto);
     color: #ffffff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-family: 'Lato', sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: background-color 0.2s, transform 0.1s;
 }
+.btn-reporte-primary:hover { background-color: #5a0016; }
 
-.btn-reporte-danger:hover {
-    background-color: #5a0016;
-}
-
-.btn-reporte-danger:active {
+.btn-reporte-success:active,
+.btn-reporte-danger:active,
+.btn-reporte-info:active,
+.btn-reporte-primary:active {
     transform: scale(0.98);
+}
+
+/* --- Grid de Contadores Operativos (Check-ins / Check-outs) --- */
+.metrics-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.metric-summary-card {
+    background: #ffffff;
+    padding: 14px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.metric-summary-card span {
+    font-family: 'Lato', sans-serif;
+    font-size: 12px; /* Etiquetas KPI */
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.metric-summary-card strong {
+    font-family: 'Lato', sans-serif;
+    font-size: 25px; /* Números principales de KPI */
+    color: #1e293b;
+    font-weight: 700;
 }
 
 /* --- Desglose de Medios de Pago --- */
@@ -89,7 +124,7 @@
     padding: 12px 8px;
     border-bottom: 1px dashed #e2e8f0;
     font-family: 'Lato', sans-serif;
-    font-size: 14px; /* Tamaño estándar para enlaces y listas internas */
+    font-size: 14px;
     color: #334155;
 }
 
@@ -136,12 +171,13 @@
 
 .reporte-table-cuadre th {
     font-family: 'Lato', sans-serif;
-    font-size: 12px; /* Tamaño estricto para etiquetas KPI y cabeceras de tablas secundarias */
+    font-size: 12px; /* Cabeceras de tablas secundarias */
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     padding-bottom: 8px;
     border-bottom: 1px solid #cbd5e1;
+    text-align: left;
 }
 
 .reporte-table-cuadre td {
@@ -156,7 +192,7 @@
     color: #1e293b;
 }
 
-/* Campo de inserción de efectivo físico */
+/* Input número para efectivo físico real */
 .reporte-table-cuadre input[type="number"] {
     padding: 8px 12px;
     border-radius: 6px;
@@ -174,17 +210,10 @@
     border-color: var(--vino-tinto);
 }
 
-.reporte-table-cuadre input[type="number"]:disabled {
-    background-color: #f1f5f9;
-    color: #94a3b8;
-    cursor: not-allowed;
-}
-
-#tbl-diferencia-efectivo {
+#diferencia {
     font-family: 'Lato', sans-serif;
     font-weight: 700;
     font-size: 16px;
-    color: #64748b; /* Color neutro inicial */
 }
 
 /* --- Área de Textarea y Comentarios --- */
@@ -219,10 +248,26 @@
     border-color: var(--vino-tinto);
 }
 
-.observaciones-box textarea:disabled {
-    background-color: #f1f5f9;
-    color: #94a3b8;
-    cursor: not-allowed;
+/* --- Lista de Egresos Dinámica --- */
+.egresos-lista-box {
+    margin-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 15px;
+}
+
+.egresos-lista-box h4 {
+    font-family: 'Lato', sans-serif;
+    font-size: 14px;
+    margin: 0 0 10px 0;
+    color: #475569;
+}
+
+.egresos-lista-dinamica {
+    max-height: 120px;
+    overflow-y: auto;
+    font-family: 'Lato', sans-serif;
+    font-size: 13px;
+    color: #64748b;
 }
 
 /* --- Grid de Control de Turnos --- */
@@ -263,16 +308,61 @@
 
 .turno-card-box h4 {
     margin: 0;
-    font-family: 'Playfair Display', serif;
-    font-size: 18px; /* Proporcional a la escala visual del PMS */
+    font-family: 'Lato', sans-serif;
+    font-size: 18px;
     font-weight: 700;
     color: var(--vino-tinto);
 }
 
-/* --- Desactivación de Botones Secundarios --- */
-button:disabled {
+/* Bordes superiores decorativos de turnos para reemplazar inline styles */
+.turno-card-box.turno-manana { border-top: 4px solid var(--marron-zocalo); }
+.turno-card-box.turno-tarde  { border-top: 4px solid var(--ochre-gold); }
+.turno-card-box.turno-noche  { border-top: 4px solid #1e293b; }
+
+/* --- Tablero de Ocurrencias del Día --- */
+.ocurrencias-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.ocurrencia-columna {
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.ocurrencia-columna.manana { border-top: 3px solid var(--marron-zocalo); }
+.ocurrencia-columna.tarde  { border-top: 3px solid var(--ochre-gold); }
+.ocurrencia-columna.noche  { border-top: 3px solid #1e293b; }
+
+.ocurrencia-columna h4 {
+    font-family: 'Lato', sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #64748b;
+    margin: 0 0 10px 0;
+    display: flex;
+    justify-content: space-between;
+}
+
+.notas-dinamicas-contenedor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* --- Estados Compartidos y Desactivaciones --- */
+button:disabled, 
+input:disabled, 
+textarea:disabled {
+    background-color: #f1f5f9 !important;
+    color: #94a3b8 !important;
     opacity: 0.6;
     cursor: not-allowed !important;
     box-shadow: none !important;
     transform: none !important;
+    border-color: #cbd5e1 !important;
 }
