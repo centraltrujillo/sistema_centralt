@@ -67,14 +67,6 @@ if (closeModal) {
     });
 }
 
-if (modal) {
-    modal.addEventListener("click", (e) => {
-        if (e.target === modal) {
-            window.cerrarModal();
-        }
-    });
-}
-
 window.cerrarModal = () => { 
     if (modal) {
         modal.classList.remove("active"); 

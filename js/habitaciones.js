@@ -588,9 +588,7 @@ async function modalCheckInDirecto(hab) {
 
     const cancelBtn = modal?.querySelector('.btn-cancel');
     if (cancelBtn) cancelBtn.onclick = cerrar;
-
-    window.onclick = (e) => { if (e.target === modal) cerrar(); };
-
+    
     // --- CARGA DE DATOS INICIALES ---
     const resTarifa = document.getElementById('resTarifa');
     if (resTarifa) resTarifa.value = hab.precio_base || 0;

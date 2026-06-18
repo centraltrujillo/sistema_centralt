@@ -66,12 +66,6 @@ if (closeModal) {
     closeModal.addEventListener("click", () => window.cerrarModal());
 }
 
-if (modal) {
-    modal.addEventListener("click", (e) => {
-        if (e.target === modal) window.cerrarModal();
-    });
-}
-
 // --- HACER LAS FUNCIONES VISIBLES PARA EL HTML ---
 window.cerrarModal = () => { 
     if (modal) modal.classList.remove("active"); 
