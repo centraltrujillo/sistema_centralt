@@ -31,9 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ASIGNACIÓN DE EVENT LISTENERS ---
     filtroFecha.addEventListener('change', (e) => cargarReportePorFecha(e.target.value));
-    document.getElementById('btnAccionReporteDiario').addEventListener('click', manejarFlujoCaja);
+    document.getElementById('btnAccionReporteDiario').addEventListener('click', manejarFlujoCajaTurno);
     document.getElementById('btnGuardarArqueo').addEventListener('click', guardarConteoFisicoParcial);
     document.getElementById('btnRegistrarEgreso').addEventListener('click', abrirModalRegistrarEgreso);
+    if (document.getElementById('btnAccionReporteMaestro')) {
+    document.getElementById('btnAccionReporteMaestro').addEventListener('click', manejarCierreReporteMaestro);
+}
     
     if (document.getElementById('btnControlTurno')) {
         document.getElementById('btnControlTurno').addEventListener('click', mostrarControlDeTurno);
@@ -384,47 +387,56 @@ async function abrirModalRegistrarEgreso() {
     }
 }
 
-// ==========================================
-// 5. CONTROLADOR OPERATIVO DE APERTURA / CIERRE POR TURNO
-// ==========================================
-async function manejarFlujoCaja() {
+// ========================================================
+// CONTROLADOR INDEPENDIENTE: APERTURA / CIERRE DE TURNO
+// ========================================================
+async function manejarFlujoCajaTurno() {
     const fechaFiltro = document.getElementById('filtroFechaReporte').value;
-    const idUsuarioActivo = localStorage.getItem("id_usuario_logueado") || "TU_UUID_REAL_DE_USUARIO_DE_SUPABASE"; 
+    const idUsuarioActivo = localStorage.getItem("id_usuario_logueado") || "UUID_INVITADO"; 
     const nombreUsuarioActivo = localStorage.getItem("nombre_recepcionista") || "Recepcionista";
     const turnoActivo = localStorage.getItem("turno_activo") || "Mañana"; 
 
-    // Primero, nos aseguramos de que el reporte diario maestro exista
+    // Aseguramos que exista el día en la base de datos antes de abrir un turno
     if (!reporteActualId) {
         try {
             const { data: nuevoReporte, error: errMaestro } = await supabase
                 .from('reporte_diario')
-                .insert([{ fecha_reporte: fechaFiltro, estado: 'A', monto_apertura: 0 }])
+                .insert([{ fecha_reporte: fechaFiltro, estado: 'A', total_turno_manana: 0, total_turno_tarde: 0, total_turno_noche: 0 }])
                 .select().single();
             if (errMaestro) throw errMaestro;
             reporteActualId = nuevoReporte.id;
         } catch (err) {
-            console.error("No se pudo iniciar el reporte maestro diario:", err);
+            console.error("Error al inicializar el día base:", err);
             return;
         }
     }
 
+    // SI EL TURNO ESTÁ CERRADO -> VAMOS A ABRIRLO
     if (estadoCajaActual === 'C') {
+        const saldoSugeridoApertura = await obtenerEfectivoEntregadoTurnoAnterior(fechaFiltro, turnoActivo);
+
         const { value: montoAperturaIntroducido } = await Swal.fire({
-            title: 'Apertura de Turno (Caja Chica)',
-            text: `Iniciando caja como ${nombreUsuarioActivo} en el Turno ${turnoActivo}. Ingrese el dinero en efectivo recibido:`,
+            title: `Apertura de Turno: ${turnoActivo}`,
+            html: `
+                <p style="font-size: 13px; color: #64748b;">Operador: <b>${nombreUsuarioActivo}</b></p>
+                <p style="font-size: 12px; background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px dashed #cbd5e1;">
+                    💰 El turno anterior te dejó en caja: <b>S/ ${saldoSugeridoApertura.toFixed(2)}</b>
+                </p>
+                <label style="font-size: 13px; font-weight: bold; display: block; margin-top: 10px;">Efectivo físico recibido en recepción:</label>
+            `,
             input: 'number',
             inputAttributes: { min: '0', step: '0.10' },
-            inputValue: '0.00',
+            inputValue: saldoSugeridoApertura.toFixed(2),
             showCancelButton: true,
-            confirmButtonText: 'Confirmar Apertura',
+            confirmButtonText: 'Confirmar e Iniciar',
             confirmButtonColor: '#800020',
             cancelButtonText: 'Cancelar',
-            inputValidator: (val) => { if (!val || isNaN(val) || val < 0) return '¡Debe ingresar un número válido!'; }
+            inputValidator: (val) => { if (!val || val < 0) return '¡Digita un monto válido!'; }
         });
 
         if (montoAperturaIntroducido !== undefined) {
             try {
-                const datosAperturaTurno = {
+                const { error } = await supabase.from('caja_turnos').insert([{
                     fecha: fechaFiltro,
                     turno: turnoActivo,
                     id_usuario: idUsuarioActivo,
@@ -433,63 +445,112 @@ async function manejarFlujoCaja() {
                     egresos_efectivo: 0,
                     efectivo_real_entregado: 0,
                     estado: 'A'
-                };
-
-                const { error } = await supabase.from('caja_turnos').insert([datosAperturaTurno]);
+                }]);
                 if (error) throw error;
                 
-                Swal.fire('Turno Abierto', `Se abrió la caja chica del turno ${turnoActivo}.`, 'success');
+                Swal.fire('¡Turno Abierto!', `Caja chica lista para el turno ${turnoActivo}.`, 'success');
                 cargarReportePorFecha(fechaFiltro);
             } catch (err) {
-                console.error("❌ Error al abrir turno:", err);
-                Swal.fire('Error', `No se pudo abrir la caja de este turno.`, 'error');
+                console.error(err);
+                Swal.fire('Error', 'No se pudo abrir el turno.', 'error');
             }
         }
+
     } else {
-        // CIERRE DE CAJA DEL TURNO
+        // SI EL TURNO ESTÁ ABIERTO -> VAMOS A CERRARLO
         const valorFisicoIngresado = parseFloat(document.getElementById('efectivo_fisico_real').value);
         if (isNaN(valorFisicoIngresado)) {
-            Swal.fire('Conteo Requerido', 'Por favor, digite el monto de efectivo físico real antes de cerrar tu turno.', 'warning');
+            Swal.fire('Atención', 'Digita el conteo de efectivo físico real antes de cerrar.', 'warning');
             return;
         }
 
         const confirmacion = await Swal.fire({
-            title: '¿Confirmar Cierre de Turno?',
-            text: `Se congelarán las finanzas de la caja chica para el turno ${turnoActivo} bajo la firma de ${nombreUsuarioActivo}.`,
+            title: `¿Cerrar Turno ${turnoActivo}?`,
+            text: `Se guardará tu arqueo de caja bajo el usuario de ${nombreUsuarioActivo}.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#800020',
-            confirmButtonText: 'Sí, Cerrar Turno'
+            confirmButtonText: 'Sí, Entregar Turno'
         });
 
         if (confirmacion.isConfirmed) {
             try {
-                // Actualizamos la fila de caja_turnos correspondiente
-                const { error } = await supabase.from('caja_turnos').update({
+                // 1. Cerrar el turno individual
+                const { error: errTurno } = await supabase.from('caja_turnos').update({
                     ingresos_efectivo: efectivoSistemaGlobal,
                     egresos_efectivo: egresosEfectivoGlobal,
                     efectivo_real_entregado: valorFisicoIngresado,
                     estado: 'C'
                 }).eq('id', cajaTurnoActualId);
 
-                if (error) throw error;
+                if (errTurno) throw errTurno;
 
-                // Sincronizamos los totales calculados en el reporte diario consolidado como auditoría
-                const columnaMontoTurno = turnoActivo === 'Mañana' ? 'total_turno_manana' : (turnoActivo === 'Tarde' ? 'total_turno_tarde' : 'total_turno_noche');
-                const columnaRecepTurno = turnoActivo === 'Mañana' ? 'recep_manana' : (turnoActivo === 'Tarde' ? 'recep_tarde' : 'recep_noche');
+                // 2. Enviar datos informativos a las tarjetas acumuladoras del Reporte Maestro
+                const colMonto = turnoActivo === 'Mañana' ? 'total_turno_manana' : (turnoActivo === 'Tarde' ? 'total_turno_tarde' : 'total_turno_noche');
+                const colRecep = turnoActivo === 'Mañana' ? 'recep_manana' : (turnoActivo === 'Tarde' ? 'recep_tarde' : 'recep_noche');
 
                 await supabase.from('reporte_diario').update({
-                    [columnaMontoTurno]: efectivoSistemaGlobal,
-                    [columnaRecepTurno]: nombreUsuarioActivo
+                    [colMonto]: efectivoSistemaGlobal,
+                    [colRecep]: nombreUsuarioActivo
                 }).eq('id', reporteActualId);
 
-                Swal.fire('Turno Cerrado', 'Los movimientos del turno se han guardado y auditado con éxito.', 'success');
+                Swal.fire('Turno Finalizado', 'Cierre de turno guardado. Ya puedes cambiar de usuario en el sistema.', 'success');
                 cargarReportePorFecha(fechaFiltro);
             } catch (err) {
-                console.error("❌ Error al cerrar turno:", err);
-                Swal.fire('Error', 'No se pudo guardar el cierre del turno.', 'error');
+                console.error(err);
+                Swal.fire('Error', 'No se pudo procesar el cierre.', 'error');
             }
         }
+    }
+}
+
+// ========================================================
+// CONTROLADOR INDEPENDIENTE: CIERRE GLOBAL DEL DÍA (MAESTRO)
+// ========================================================
+async function manejarCierreReporteMaestro() {
+    const fechaFiltro = document.getElementById('filtroFechaReporte').value;
+
+    // Buscamos el estado actual del reporte diario maestro
+    try {
+        const { data: rep } = await supabase.from('reporte_diario').select('estado').eq('id', reporteActualId).single();
+        
+        if (rep && rep.estado === 'C') {
+            // El administrador puede reabrir el día si es necesario corregir algo
+            const reabrir = await Swal.fire({
+                title: '¿Reabrir Reporte Diario?',
+                text: 'El día volverá a estar operativo para modificaciones generales.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#d4a017',
+                confirmButtonText: 'Sí, Reabrir Día'
+            });
+
+            if (reabrir.isConfirmed) {
+                await supabase.from('reporte_diario').update({ estado: 'A' }).eq('id', reporteActualId);
+                Swal.fire('Día Abierto', 'El reporte general se encuentra activo nuevamente.', 'success');
+                cargarReportePorFecha(fechaFiltro);
+            }
+            return;
+        }
+
+        // Lógica para bloquear todo el día (Congelar los 3 turnos)
+        const confirmarCierreDia = await Swal.fire({
+            title: '¿Cerrar Reporte Diario General?',
+            text: '¡Atención! Esto consolidará los tres turnos operativos y bloqueará las finanzas de esta fecha.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#1e293b',
+            confirmButtonText: 'Sí, Cerrar Día Completo'
+        });
+
+        if (confirmarCierreDia.isConfirmed) {
+            await supabase.from('reporte_diario').update({ estado: 'C' }).eq('id', reporteActualId);
+            Swal.fire('Día Clausurado', 'El reporte diario maestro ha sido guardado en los libros de auditoría.', 'success');
+            cargarReportePorFecha(fechaFiltro);
+        }
+
+    } catch (err) {
+        console.error("Error al procesar el cierre maestro:", err);
     }
 }
 
@@ -511,16 +572,6 @@ async function guardarConteoFisicoParcial() {
 // ==========================================
 // 6. AUXILIARES DE RENDERIZACIÓN Y AUDITORÍA DE NOMBRES
 // ==========================================
-async function asegurarRecepcionistaEnTurnoActual() {
-    if (!reporteActualId) return;
-    const horaPeru = new Date().getHours();
-    let columnaTurno = horaPeru >= 7 && horaPeru < 14 ? 'recep_manana' : (horaPeru >= 14 && horaPeru < 21 ? 'recep_tarde' : 'recep_noche');
-    const nombreUsuarioActivo = localStorage.getItem("nombre_recepcionista") || "Fernanda Salinas";
-
-    try {
-        await supabase.from('reporte_diario').update({ [columnaTurno]: nombreUsuarioActivo }).eq('id', reporteActualId).is(columnaTurno, null);
-    } catch (err) { console.error(err); }
-}
 
 function actualizarEstiloDiferenciaHTML(montoDiferencia) {
     const contenedorDif = document.getElementById('diferencia');
@@ -554,14 +605,19 @@ function renderizarListaEgresos(listaEgresos) {
     html += '</ul>';
     contenedor.innerHTML = html;
 }
-
 function actualizarCamposTurnosYEstado(reporte, estadoDelTurno) {
-    const btnAccion = document.getElementById('btnAccionReporteDiario');
+    const btnTurno = document.getElementById('btnAccionReporteDiario');
+    const btnMaestro = document.getElementById('btnAccionReporteMaestro'); 
     const lblEstado = document.getElementById('lbl-estado-caja');
     const inputFisico = document.getElementById('efectivo_fisico_real');
     const obs = document.getElementById('observaciones');
     const btnGuardar = document.getElementById('btnGuardarArqueo');
+    
+    // Botones secundarios a proteger
+    const btnEgreso = document.getElementById('btnRegistrarEgreso');
+    const btnOcurrencia = document.getElementById('btnAgregarOcurrencia');
 
+    // Inyectar datos de los turnos en las tarjetas acumuladoras
     document.getElementById('recep_manana').innerHTML = `Recepcionista: <b>${reporte.recep_manana || '-'}</b>`;
     document.getElementById('total_turno_manana').innerText = `S/ ${parseFloat(reporte.total_turno_manana || 0).toFixed(2)}`;
     document.getElementById('recep_tarde').innerHTML = `Recepcionista: <b>${reporte.recep_tarde || '-'}</b>`;
@@ -569,22 +625,63 @@ function actualizarCamposTurnosYEstado(reporte, estadoDelTurno) {
     document.getElementById('recep_noche').innerHTML = `Recepcionista: <b>${reporte.recep_noche || '-'}</b>`;
     document.getElementById('total_turno_noche').innerText = `S/ ${parseFloat(reporte.total_turno_noche || 0).toFixed(2)}`;
 
+    // 🟢 EVALUACIÓN DEL REPORTE MAESTRO DIARIO (GLOBAL)
+    if (btnMaestro) {
+        if (reporte.estado === 'C') {
+            btnMaestro.innerHTML = `<i class="fa-solid fa-folder-closed"></i> Reporte Diario: CERRADO`;
+            btnMaestro.className = "btn-maestro-danger"; 
+        } else {
+            btnMaestro.innerHTML = `<i class="fa-solid fa-folder-open"></i> Reporte Diario: ABIERTO`;
+            btnMaestro.className = "btn-maestro-success";
+        }
+    }
+
+    // 🔵 EVALUACIÓN DEL TURNO OPERATIVO ACTUAL
     if (estadoDelTurno === 'A') {
         lblEstado.innerText = "TURNO: ABIERTO";
         lblEstado.style.color = "#27ae60";
-        btnAccion.innerHTML = `<i class="fa-solid fa-lock"></i> Cerrar Turno`;
-        btnAccion.className = "btn-reporte-danger";
+        btnTurno.innerHTML = `<i class="fa-solid fa-lock"></i> Cerrar Turno`;
+        btnTurno.className = "btn-reporte-danger";
+        btnTurno.disabled = false; // Se mantiene activo para que puedan cerrar
+
+        // Habilitar campos y operaciones del turno
         inputFisico.disabled = false;
         obs.disabled = false;
         btnGuardar.disabled = false;
+        if (btnEgreso) btnEgreso.disabled = false;
+        if (btnOcurrencia) btnOcurrencia.disabled = false;
+
     } else {
         lblEstado.innerText = "TURNO: CERRADO";
         lblEstado.style.color = "#ef4444";
-        btnAccion.innerHTML = `<i class="fa-solid fa-folder-open"></i> Abrir Turno`;
-        btnAccion.className = "btn-reporte-success";
+        btnTurno.innerHTML = `<i class="fa-solid fa-folder-open"></i> Abrir Turno`;
+        btnTurno.className = "btn-reporte-success";
+        btnTurno.disabled = false;
+
+        // Deshabilitar campos y operaciones del turno
         inputFisico.disabled = true;
         obs.disabled = true;
         btnGuardar.disabled = true;
+        if (btnEgreso) btnEgreso.disabled = true;
+        if (btnOcurrencia) btnOcurrencia.disabled = true;
+    }
+
+    // 🔒 PROTECCIÓN MÁXIMA: Si el día completo está cerrado por administración, congelamos todo en cascada
+    if (reporte.estado === 'C') {
+        lblEstado.innerText = "DÍA CLAUSURADO (AUDITORÍA)";
+        lblEstado.style.color = "#475569"; // Gris oscuro corporativo
+        
+        // Bloquear la capacidad de reabrir turnos individuales
+        btnTurno.innerHTML = `<i class="fa-solid fa-ban"></i> Turno Bloqueado`;
+        btnTurno.className = "btn-reporte-disabled"; // Dale estilos grises en tu CSS
+        btnTurno.disabled = true;
+        
+        // Asegurar que todo lo demás permanezca cerrado
+        inputFisico.disabled = true;
+        obs.disabled = true;
+        btnGuardar.disabled = true;
+        if (btnEgreso) btnEgreso.disabled = true;
+        if (btnOcurrencia) btnOcurrencia.disabled = true;
     }
 }
 
@@ -643,6 +740,43 @@ function mostrarControlDeTurno() {
         icon: 'info',
         confirmButtonColor: '#d4a017'
     });
+}
+
+async function obtenerEfectivoEntregadoTurnoAnterior(fechaActual, turnoActual) {
+    let fechaBuscar = fechaActual;
+    let turnoBuscar = '';
+
+    // Determinar cuál fue el turno anterior
+    if (turnoActual === 'Tarde') {
+        turnoBuscar = 'Mañana';
+    } else if (turnoActual === 'Noche') {
+        turnoBuscar = 'Tarde';
+    } else if (turnoActual === 'Mañana') {
+        turnoBuscar = 'Noche';
+        // Si es mañana, el turno anterior fue la noche del día operativo anterior
+        const fechaTemp = new Date(fechaActual);
+        fechaTemp.setDate(fechaTemp.getDate() - 1);
+        fechaBuscar = fechaTemp.toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('caja_turnos')
+            .select('efectivo_real_entregado')
+            .eq('fecha', fechaBuscar)
+            .eq('turno', turnoBuscar)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        // Si el turno anterior existe y se cerró, devolvemos su efectivo real entregado.
+        // Si no existe (por ejemplo, un inicio de mes o día caído), devolvemos una base por defecto (S/ 100.00).
+        return data && data.efectivo_real_entregado !== null ? parseFloat(data.efectivo_real_entregado) : 100.00;
+
+    } catch (err) {
+        console.error("Error al recuperar saldo del turno anterior:", err);
+        return 100.00; // Saldo de contingencia
+    }
 }
 
 function cargarDatosSesionUsuario() {
