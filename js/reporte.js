@@ -1,795 +1,405 @@
-import { client as supabase } from './config.js';
+import { supabase } from './config.js';
 
-let reporteActualId = null;
-let cajaTurnoActualId = null; // ID de la fila actual en public.caja_turnos
-let estadoCajaActual = 'C'; // 'A' = Abierto, 'C' = Cerrado (Se mapea según el turno actual)
-let efectivoSistemaGlobal = 0; // Efectivo recaudado en el turno actual
-let montoAperturaGlobal = 0; // Base con la que abre el turno actual
-let egresosEfectivoGlobal = 0; // Egresos registrados exclusivamente en el turno actual
+// ==========================================
+// VARIABLES DE ESTADO GLOBAL DEL REPORTE
+// ==========================================
+let fechaSeleccionada = '';
+let turnoActual = 'Mañana';
+let usuarioActivo = {
+    id: null,
+    nombres: 'Recepcionista'
+};
 
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Obtener la hora y fecha real de Trujillo
-    const ahora = new Date();
-    const horaActual = ahora.getHours();
-    
-    // Calculamos la fecha en formato YYYY-MM-DD considerando la zona horaria
-    let fechaOperativa = ahora.toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
+// ==========================================
+// INICIALIZACIÓN DE LA PÁGINA
+// ==========================================
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Calcular Fecha Hotelera y Turno según la Hora de Perú (Regla de Negocio)
+    calcularFechaYTurnoPeru();
 
-    // 🌙 TRUCO DE MADRUGADA: Si estamos entre medianoche y 6 AM, jalamos el reporte del día anterior
-    if (horaActual >= 0 && horaActual < 6) {
-        const fechaTemporal = new Date();
-        fechaTemporal.setDate(fechaTemporal.getDate() - 1);
-        fechaOperativa = fechaTemporal.toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
-        console.log(`🌙 Auditoría: Detectada madrugada operativa. Cargando reporte del día anterior: ${fechaOperativa}`);
-    }
-
+    // 2. Inicializar el Input de Filtro de Fecha con la Fecha Calculada
     const filtroFecha = document.getElementById('filtroFechaReporte');
-    filtroFecha.value = fechaOperativa;
-
-    cargarReportePorFecha(fechaOperativa);
-    cargarDatosSesionUsuario();
-
-    // --- ASIGNACIÓN DE EVENT LISTENERS ---
-    filtroFecha.addEventListener('change', (e) => cargarReportePorFecha(e.target.value));
-    document.getElementById('btnAccionReporteDiario').addEventListener('click', manejarFlujoCajaTurno);
-    document.getElementById('btnGuardarArqueo').addEventListener('click', guardarConteoFisicoParcial);
-    document.getElementById('btnRegistrarEgreso').addEventListener('click', abrirModalRegistrarEgreso);
-    if (document.getElementById('btnAccionReporteMaestro')) {
-    document.getElementById('btnAccionReporteMaestro').addEventListener('click', manejarCierreReporteMaestro);
-}
-    
-    if (document.getElementById('btnControlTurno')) {
-        document.getElementById('btnControlTurno').addEventListener('click', mostrarControlDeTurno);
+    if (filtroFecha) {
+        filtroFecha.value = fechaSeleccionada;
+        // Escuchar cambios manuales en el filtro de fecha
+        filtroFecha.addEventListener('change', (e) => {
+            fechaSeleccionada = e.target.value;
+            cargarReporteCompleto();
+        });
     }
-    
-    // Vinculación del nuevo botón de bitácora diaria
+
+    // 3. Recuperar e inicializar datos del Usuario en Sesión
+    obtenerUsuarioSesion();
+
+    // 4. Cargar toda la data de las tablas de Supabase
+    await cargarReporteCompleto();
+
+    // 5. Asignar Eventos a los Botones de Acción
+    const btnEgreso = document.getElementById('btnRegistrarEgreso');
+    if (btnEgreso) btnEgreso.addEventListener('click', registrarEgreso);
+
     const btnOcurrencia = document.getElementById('btnAgregarOcurrencia');
-    if (btnOcurrencia) {
-        btnOcurrencia.addEventListener('click', abrirModalAgregarOcurrencia);
-    }
-    
-    // 🌟 EVENT LISTENER: Cálculo de diferencia en vivo cuando el usuario escribe
-    document.getElementById('efectivo_fisico_real').addEventListener('input', (e) => {
-        const valorFisico = parseFloat(e.target.value);
-        
-        if (isNaN(valorFisico)) {
-            document.getElementById('diferencia').innerText = "S/ 0.00";
-            document.getElementById('diferencia').style.color = "#64748b";
-            return;
-        }
-
-        // Efectivo esperado del turno = Apertura Turno + Efectivo ingresado Turno - Egresos Turno
-        const efectivoEsperado = montoAperturaGlobal + efectivoSistemaGlobal - egresosEfectivoGlobal;
-        const diferenciaCalculada = valorFisico - efectivoEsperado;
-        
-        actualizarEstiloDiferenciaHTML(diferenciaCalculada);
-    });
+    if (btnOcurrencia) btnOcurrencia.addEventListener('click', guardarOcurrencia);
 });
 
 // ==========================================
-// 1. CARGAR DATOS DESDE SUPABASE (SINCRO DE 4 TABLAS)
+// FUNCIÓN CENTRAL DE CARGA
 // ==========================================
-async function cargarReportePorFecha(fechaDestino) {
-    try {
-        const turnoActivo = localStorage.getItem("turno_activo") || "Mañana";
+async function cargarReporteCompleto() {
+    console.log(`Cargando reporte para la fecha: ${fechaSeleccionada} - Turno actual: ${turnoActual}`);
+    await renderizarKPISyPagos();
+    await renderizarCajaTurnos();
+    await renderizarEgresos();
+    await renderizarOcurrencias();
+}
 
-        // Consultas simultáneas para optimizar la velocidad en Trujillo
-        const [respuestaCaja, respuestaTurno, respuestaPagos, respuestaEgresos] = await Promise.all([
-            supabase.from('reporte_diario').select('*').eq('fecha_reporte', fechaDestino).maybeSingle(),
-            supabase.from('caja_turnos').select('*').eq('fecha', fechaDestino).eq('turno', turnoActivo).maybeSingle(),
-            supabase.from('pagos').select('*').eq('fecha_pago', fechaDestino), 
-            supabase.from('egresos').select('*').eq('fecha_egreso', fechaDestino).eq('turno', turnoActivo)
-        ]);
+// ==========================================
+// LÓGICA DE CONTROL DE TIEMPO (ZONA HORARIA PERÚ)
+// ==========================================
+function calcularFechaYTurnoPeru() {
+    const ahora = new Date();
+    // Obtener la hora exacta de Perú en formato 24H (00 a 23)
+    const horaPeru = parseInt(ahora.toLocaleTimeString('en-US', { timeZone: 'America/Lima', hour12: false, hour: '2-digit' }));
+    // Formateador de fecha compatible con los inputs type="date" (YYYY-MM-DD)
+    const formateadorFecha = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' });
 
-        if (respuestaCaja.error) throw respuestaCaja.error;
-        if (respuestaTurno.error) throw respuestaTurno.error;
-        if (respuestaPagos.error) throw respuestaPagos.error;
-        if (respuestaEgresos.error) throw respuestaEgresos.error;
+    fechaSeleccionada = formateadorFecha.format(ahora);
 
-        const reporte = respuestaCaja.data;
-        const cajaTurno = respuestaTurno.data;
-        const pagos = respuestaPagos.data || [];
-        const egresos = respuestaEgresos.data || [];
-
-        // Si no existe reporte diario maestro, reseteamos la UI completa
-        if (!reporte) {
-            reporteActualId = null;
-            cajaTurnoActualId = null;
-            montoAperturaGlobal = 0;
-            efectivoSistemaGlobal = 0;
-            egresosEfectivoGlobal = 0;
-            renderizarCajaCerradaVacia();
-            resetearKPIsYNotasVacias();
-            return;
+    if (horaPeru >= 7 && horaPeru < 14) {
+        turnoActual = 'Mañana';
+    } else if (horaPeru >= 14 && horaPeru < 21) {
+        turnoActual = 'Tarde';
+    } else {
+        turnoActual = 'Noche';
+        // Si es madrugada (entre 00:00 y 06:59), pertenece al día hotelero anterior
+        if (horaPeru >= 0 && horaPeru < 7) {
+            const milisegundosEnUnDia = 24 * 60 * 60 * 1000;
+            const ayer = new Date(ahora.getTime() - milisegundosEnUnDia);
+            fechaSeleccionada = formateadorFecha.format(ayer);
         }
-
-        reporteActualId = reporte.id;
-        
-        // El estado operativo de la interfaz se rige por el turno actual en caja_turnos
-        if (!cajaTurno) {
-            cajaTurnoActualId = null;
-            estadoCajaActual = 'C'; // Turno cerrado o no abierto aún
-            montoAperturaGlobal = 0;
-        } else {
-            cajaTurnoActualId = cajaTurno.id;
-            estadoCajaActual = cajaTurno.estado; // 'A' o 'C' según la tabla caja_turnos
-            montoAperturaGlobal = parseFloat(cajaTurno.monto_apertura || 0);
-        }
-
-        // --- PROCESAMIENTO DINÁMICO DE INGRESOS (Solo del turno activo para la caja chica) ---
-        let efecTurno = 0, yapeTotal = 0, transTotal = 0, tarjTotal = 0, usdSolesTotal = 0, consumosTotal = 0;
-        let ventasTotalesDelDia = 0;
-
-        pagos.forEach(pago => {
-            const monto = parseFloat(pago.monto_soles || 0);
-            const metodo = String(pago.metodo_pago).toUpperCase().trim();
-            
-            // KPI Global de ventas brutas del día (Suma de todos los métodos)
-            ventasTotalesDelDia += monto;
-
-            // Para el control de caja chica en efectivo, filtramos los ingresos que correspondan al turno activo
-            if (pago.turno === turnoActivo) {
-                if (metodo === 'EFECTIVO') efecTurno += monto;
-            }
-
-            // Totales informativos generales para la vista
-            if (metodo === 'YAPE') yapeTotal += monto;
-            else if (metodo === 'TRANSFERENCIA') transTotal += monto;
-            else if (metodo === 'TARJETA') tarjTotal += monto;
-            else if (pago.moneda === 'USD') usdSolesTotal += monto;
-
-            if ((pago.es_consumo === true || pago.categoria === 'Consumo') && pago.estado_pago === 'Pagado') {
-                consumosTotal += monto;
-            }
-        });
-
-        efectivoSistemaGlobal = efecTurno;
-
-        // --- PROCESAMIENTO DINÁMICO DE EGRESOS DE ESTE TURNO ---
-        let totalEgresosTurno = 0;
-        egresos.forEach(egr => { totalEgresosTurno += parseFloat(egr.monto || 0); });
-        egresosEfectivoGlobal = totalEgresosTurno;
-
-        // --- INYECCIÓN EN LOS ELEMENTOS HTML ---
-        document.getElementById('total_ingresos_sistema').innerText = `S/ ${ventasTotalesDelDia.toFixed(2)}`;
-        document.getElementById('monto-apertura').innerText = `S/ ${montoAperturaGlobal.toFixed(2)}`;
-        
-        document.getElementById('total_efectivo').innerText = `S/ ${efecTurno.toFixed(2)}`;
-        document.getElementById('total_yape').innerText = `S/ ${yapeTotal.toFixed(2)}`;
-        document.getElementById('total_transferencia').innerText = `S/ ${transTotal.toFixed(2)}`;
-        document.getElementById('total_tarjeta').innerText = `S/ ${tarjTotal.toFixed(2)}`;
-        document.getElementById('total_usd_en_soles').innerText = `S/ ${usdSolesTotal.toFixed(2)}`;
-        document.getElementById('total_consumos').innerText = `S/ ${consumosTotal.toFixed(2)}`;
-        document.getElementById('total_egresos_efectivo').innerText = `S/ ${totalEgresosTurno.toFixed(2)}`;
-
-        // Arqueo de Caja del Turno
-        const efectivoEsperadoTotal = montoAperturaGlobal + efecTurno - totalEgresosTurno;
-        document.getElementById('efectivo_esperado_cierre').innerText = `S/ ${efectivoEsperadoTotal.toFixed(2)}`;
-        document.getElementById('tbl-sistema-efectivo').innerText = `S/ ${efectivoEsperadoTotal.toFixed(2)}`;
-
-        // Setear valores de arqueo previos si existen en la base de datos
-        const inputFisico = document.getElementById('efectivo_fisico_real');
-        if (cajaTurno && cajaTurno.efectivo_real_entregado !== null) {
-            inputFisico.value = cajaTurno.efectivo_real_entregado;
-            const difInicial = parseFloat(cajaTurno.diferencia || 0);
-            actualizarEstiloDiferenciaHTML(difInicial);
-        } else {
-            inputFisico.value = '';
-            actualizarEstiloDiferenciaHTML(0);
-        }
-
-        document.getElementById('observaciones').value = reporte.observaciones || '';
-        
-        // Renderizar componentes y bitácoras
-        renderizarListaEgresos(egresos);
-        actualizarCamposTurnosYEstado(reporte, estadoCajaActual);
-        await asegurarRecepcionistaEnTurnoActual();
-
-        // Carga paralela de KPIs de ocupación y bitácoras de texto
-        await calcularMovimientosDelDia(fechaDestino, reporte);
-        await cargarOcurrenciasDelDia(fechaDestino);
-
-    } catch (err) {
-        console.error("Error crítico al consolidar el flujo operativo:", err);
-        Swal.fire('Error de Conexión', 'No se pudieron recuperar las finanzas en tiempo real.', 'error');
     }
 }
 
 // ==========================================
-// 2. CONTROLADOR DINÁMICO DE FLUX DE HUÉSPEDES (KPIs)
+// RECUPERACIÓN DE SESIÓN DEL USUARIO
 // ==========================================
-async function calcularMovimientosDelDia(fechaDestino, reporteExistente) {
-    try {
-        if (reporteExistente && reporteExistente.estado === 'C') {
-            document.getElementById('num_checkins').innerText = reporteExistente.num_checkins || 0;
-            document.getElementById('num_checkouts').innerText = reporteExistente.num_checkouts || 0;
-            document.getElementById('num_reservas_nuevas').innerText = reporteExistente.num_reservas_nuevas || 0;
-            return;
-        }
+function obtenerUsuarioSesion() {
+    const formElement = document.querySelector('form'); // Por si se guarda en dataset del form central
+    
+    usuarioActivo.id = (formElement && formElement.dataset.idUsuarioLogueado) || 
+                       localStorage.getItem("id_usuario_logueado") || 
+                       "TU_UUID_REAL_DE_USUARIO_DE_SUPABASE"; 
+                       
+    usuarioActivo.nombres = localStorage.getItem("nombre_recepcionista") || 
+                            document.getElementById("resRecepcion")?.value.trim() || 
+                            "Recepcionista";
 
-        const [resCheckins, resCheckouts, resNuevas] = await Promise.all([
-            supabase.from('reservas').select('id', { count: 'exact', head: true }).eq('fecha_checkin', fechaDestino),
-            supabase.from('reservas').select('id', { count: 'exact', head: true }).eq('fecha_checkout', fechaDestino),
-            supabase.from('reservas').select('id', { count: 'exact', head: true }).eq('fecha_creacion', fechaDestino)
-        ]);
-
-        const totalIns = resCheckins.count || 0;
-        const totalOuts = resCheckouts.count || 0;
-        const totalNuevas = resNuevas.count || 0;
-
-        document.getElementById('num_checkins').innerText = totalIns;
-        document.getElementById('num_checkouts').innerText = totalOuts;
-        document.getElementById('num_reservas_nuevas').innerText = totalNuevas;
-
-        if (reporteActualId && reporteExistente.estado === 'A') {
-            await supabase.from('reporte_diario').update({
-                num_checkins: totalIns,
-                num_checkouts: totalOuts,
-                num_reservas_nuevas: totalNuevas
-            }).eq('id', reporteActualId);
-        }
-    } catch (err) {
-        console.error("Error calculando flujos de habitaciones del día:", err);
+    // Si guardas el turno activo fijado en el login, lo respetamos; si no, usamos el calculado por hora
+    if (localStorage.getItem("turno_activo")) {
+        turnoActual = localStorage.getItem("turno_activo");
     }
+
+    // Pintar datos básicos en el header del dashboard si existen los elementos
+    const elName = document.getElementById('userName');
+    const elRole = document.getElementById('userRole');
+    if (elName) elName.innerText = usuarioActivo.nombres;
+    if (elRole) elRole.innerText = localStorage.getItem("rol_usuario") || "Recepcionista";
 }
 
 // ==========================================
-// 3. CONTROLADOR DE OCURRENCIAS POR TURNO (VINCULADO A TU TABLA EXACTA)
+// 1. RENDERIZAR KPIs Y DESGLOSE (`reporte_diario`)
 // ==========================================
-async function cargarOcurrenciasDelDia(fechaDestino) {
-    const colManana = document.getElementById('columna-notas-manana');
-    const colTarde = document.getElementById('columna-notas-tarde');
-    const colNoche = document.getElementById('columna-notas-noche');
+async function renderizarKPISyPagos() {
+    const { data: reporte, error } = await supabase
+        .from('reporte_diario')
+        .select('*')
+        .eq('fecha_reporte', fechaSeleccionada)
+        .maybeSingle();
 
-    try {
-        const { data: listaOcurrencias, error } = await supabase
-            .from('ocurrencias')
-            .select('*')
-            .eq('fecha', fechaDestino)
-            .order('creado_at', { ascending: true });
+    if (error) return console.error('Error al cargar reporte_diario:', error);
 
-        if (error) throw error;
+    const totalIngresosEl = document.getElementById('total_ingresos_sistema');
+    const lblEstado = document.getElementById('lbl-estado-caja');
+    const btnMaestro = document.getElementById('btnAccionReporteMaestro');
 
-        colManana.innerHTML = '';
-        colTarde.innerHTML = '';
-        colNoche.innerHTML = '';
-
-        let cantManana = 0, cantTarde = 0, cantNoche = 0;
-
-        listaOcurrencias.forEach(ocu => {
-            const creadorNota = ocu.usuario_nombre || "Recepcionista";
-
-            const htmlNota = `
-                <div style="background: white; padding: 8px 10px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; font-size: 12px; margin-bottom: 6px;">
-                    <p style="margin: 0 0 6px 0; color: #334155; line-height: 1.4;">${ocu.descripcion}</p>
-                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #94a3b8;">
-                        <span>✍️ <b>${creadorNota}</b></span>
-                        <span>${new Date(ocu.creado_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                </div>
-            `;
-
-            if (ocu.turno === 'Mañana') { colManana.innerHTML += htmlNota; cantManana++; }
-            else if (ocu.turno === 'Tarde') { colTarde.innerHTML += htmlNota; cantTarde++; }
-            else if (ocu.turno === 'Noche') { colNoche.innerHTML += htmlNota; cantNoche++; }
-        });
-
-        if (cantManana === 0) colManana.innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 10px;">Sin notas.</p>`;
-        if (cantTarde === 0) colTarde.innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 10px;">Sin notas.</p>`;
-        if (cantNoche === 0) colNoche.innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 10px;">Sin notas.</p>`;
-
-    } catch (err) {
-        console.error("Error al renderizar la bitácora de turnos:", err);
-    }
-}
-
-async function abrirModalAgregarOcurrencia() {
-    if (estadoCajaActual !== 'A') {
-        Swal.fire('Operación Bloqueada', 'No se pueden registrar notas operativas si tu turno de caja está cerrado.', 'warning');
+    if (!reporte) {
+        // Inicialización visual a cero si el día no ha sido abierto en base de datos
+        if (totalIngresosEl) totalIngresosEl.innerText = 'S/ 0.00';
+        if (lblEstado) {
+            lblEstado.innerText = 'REPORTE DE HOY: NO ABIERTO';
+            lblEstado.className = 'status-indicator closed';
+        }
+        if (btnMaestro) btnMaestro.innerHTML = `<i class="fa-solid fa-folder"></i> Reporte Diario: CERRADO`;
+        resetearValoresCero();
         return;
     }
 
-    const fechaFiltro = document.getElementById('filtroFechaReporte').value;
-    const idUsuarioActivo = localStorage.getItem("id_usuario_logueado") || null; 
-    const turnoActivo = localStorage.getItem("turno_activo") || "Mañana"; 
-    const nombreUsuarioActivo = localStorage.getItem("nombre_recepcionista") || "Fernanda Salinas";
+    // Inyectar contadores numéricos (KPIs)
+    asignarTextoPorId('num_checkins', reporte.num_checkins);
+    asignarTextoPorId('num_checkouts', reporte.num_checkouts);
+    asignarTextoPorId('num_reservas_nuevas', reporte.num_reservas_nuevas);
 
-    const { value: textoNota } = await Swal.fire({
-        title: '📋 Nueva Ocurrencia / Entrega de Turno',
-        input: 'textarea',
-        inputLabel: `Registrar pendiente en el Turno: ${turnoActivo}`,
-        inputPlaceholder: 'Escribe aquí mantenimientos pendientes, entrega de llaves, cobros pendientes...',
-        showCancelButton: true,
-        confirmButtonColor: '#800020',
-        confirmButtonText: 'Guardar en Bitácora',
-        cancelButtonText: 'Cancelar',
-        inputValidator: (value) => { if (!value.trim()) return '¡La nota no puede estar vacía!'; }
+    // Inyectar montos financieros formateados
+    if (totalIngresosEl) totalIngresosEl.innerText = `S/ ${reporte.total_ingresos_sistema.toFixed(2)}`;
+    asignarTextoPorId('total_efectivo', `S/ ${reporte.total_efectivo.toFixed(2)}`);
+    asignarTextoPorId('total_yape', `S/ ${reporte.total_yape.toFixed(2)}`);
+    asignarTextoPorId('total_transferencia', `S/ ${reporte.total_transferencia.toFixed(2)}`);
+    asignarTextoPorId('total_tarjeta', `S/ ${reporte.total_tarjeta.toFixed(2)}`);
+    asignarTextoPorId('total_usd_en_soles', `S/ ${reporte.total_usd_en_soles.toFixed(2)}`);
+
+    // Gestionar el indicador visual del estado global de la caja del hotel
+    if (lblEstado) {
+        if (reporte.estado === 'A') {
+            lblEstado.innerText = 'REPORTE DE HOY: ABIERTO';
+            lblEstado.className = 'status-indicator open';
+            if (btnMaestro) btnMaestro.innerHTML = `<i class="fa-solid fa-folder-open"></i> Reporte Diario: ABIERTO`;
+        } else {
+            lblEstado.innerText = 'REPORTE DE HOY: CERRADO';
+            lblEstado.className = 'status-indicator closed';
+            if (btnMaestro) btnMaestro.innerHTML = `<i class="fa-solid fa-folder"></i> Reporte Diario: CERRADO`;
+        }
+    }
+}
+
+function resetearValoresCero() {
+    ['num_checkins', 'num_checkouts', 'num_reservas_nuevas'].forEach(id => asignarTextoPorId(id, '0'));
+    ['total_efectivo', 'total_yape', 'total_transferencia', 'total_tarjeta', 'total_usd_en_soles'].forEach(id => {
+        asignarTextoPorId(id, 'S/ 0.00');
     });
+}
 
-    if (textoNota) {
-        try {
-            const { error } = await supabase.from('ocurrencias').insert([{
-                fecha: fechaFiltro,
-                turno: turnoActivo,
-                descripcion: textoNota.trim(),
-                usuario_id: idUsuarioActivo,
-                usuario_nombre: nombreUsuarioActivo
-            }]);
+// ==========================================
+// 2. CONTROL DE TURNOS Y ARQUEOS (`caja_turnos`)
+// ==========================================
+async function renderizarCajaTurnos() {
+    const { data: turnos, error } = await supabase
+        .from('caja_turnos')
+        .select('*')
+        .eq('fecha', fechaSeleccionada);
 
-            if (error) throw error;
+    if (error) return console.error('Error al obtener turnos de caja:', error);
 
-            Swal.fire('Registrado', 'La nota ha sido agregada a la bitácora del turno.', 'success');
-            await cargarOcurrenciasDelDia(fechaFiltro);
+    const mapaTurnos = { 'Mañana': null, 'Tarde': null, 'Noche': null };
+    turnos?.forEach(t => { mapaTurnos[t.turno] = t; });
 
-        } catch (err) {
-            console.error("Error al insertar ocurrencia:", err);
-            Swal.fire('Error', 'No se pudo registrar la nota operativa.', 'error');
+    // Actualizar cada bloque de turno en tu interfaz (Mañana, Tarde, Noche)
+    actualizarBloqueTurno('manana', mapaTurnos['Mañana']);
+    actualizarBloqueTurno('tarde', mapaTurnos['Tarde']);
+    actualizarBloqueTurno('noche', mapaTurnos['Noche']);
+}
+
+function actualizarBloqueTurno(prefijo, datosTurno) {
+    const totalTurnoEl = document.getElementById(`total_turno_${prefijo}`);
+    const recepEl = document.getElementById(`recep_${prefijo}`);
+
+    if (!datosTurno) {
+        if (totalTurnoEl) totalTurnoEl.innerText = 'S/ 0.00';
+        if (recepEl) recepEl.innerText = 'Sin aperturar';
+        return;
+    }
+
+    // Mostrar el efectivo esperado en el turno
+    if (totalTurnoEl) totalTurnoEl.innerText = `S/ ${datosTurno.efectivo_esperado.toFixed(2)}`;
+
+    // Si el turno evaluado coincide con el turno dinámico/activo del usuario actual, añadimos lógica en vivo
+    if (datosTurno.turno === turnoActual) {
+        const inputReal = document.getElementById('efectivo_fisico_real');
+        const diffEl = document.getElementById('diferencia');
+
+        if (inputReal && diffEl) {
+            // Escuchar el cuadre de caja en vivo mientras escribe el recepcionista
+            inputReal.addEventListener('input', (e) => {
+                const real = parseFloat(e.target.value) || 0;
+                const diff = real - datosTurno.efectivo_esperado;
+                diffEl.innerText = `S/ ${diff.toFixed(2)}`;
+
+                // Modificar el estilo visual del indicador de discrepancia
+                if (diff === 0) {
+                    diffEl.parentElement.className = "diff-indicator status-exact";
+                } else {
+                    diffEl.parentElement.className = "diff-indicator status-warning";
+                }
+            });
         }
     }
 }
 
 // ==========================================
-// 4. REGISTRAR EGRESOS EN EL TURNO
+// 3. GESTIÓN DE EGRESOS (`egresos`)
 // ==========================================
-async function abrirModalRegistrarEgreso() {
-    if (estadoCajaActual !== 'A') {
-        Swal.fire('Caja Cerrada', 'No puedes registrar egresos con tu turno cerrado.', 'warning');
-        return;
-    }
-
-    const idUsuarioActivo = localStorage.getItem("id_usuario_logueado") || "TU_UUID_REAL_DE_USUARIO_DE_SUPABASE";
-    const turnoActivo = localStorage.getItem("turno_activo") || "Mañana";
-    const fechaFiltro = document.getElementById('filtroFechaReporte').value;
-
+async function registrarEgreso() {
+    // Uso de SweetAlert2 para capturar de forma limpia el concepto y monto
     const { value: formValues } = await Swal.fire({
-        title: '📉 Registrar Egreso de Efectivo',
-        html: `
-            <input id="swal-egreso-monto" class="swal2-input" type="number" placeholder="Monto S/" step="0.10">
-            <input id="swal-egreso-desc" class="swal2-input" type="text" placeholder="Descripción / Motivo del gasto">
-        `,
+        title: 'Registrar Egreso de Caja Chica',
+        html:
+            '<input id="swal-concepto" class="swal2-input" placeholder="Concepto (ej. Pago de agua, Delivery)">' +
+            '<input id="swal-monto" type="number" step="0.01" class="swal2-input" placeholder="Monto S/">',
         focusConfirm: false,
         showCancelButton: true,
-        confirmButtonColor: '#e11d48',
-        confirmButtonText: 'Registrar Gasto',
+        confirmButtonText: 'Guardar Egreso',
+        confirmButtonColor: '#800020', // Tono corporativo Vino Tinto
         preConfirm: () => {
-            const monto = parseFloat(document.getElementById('swal-egreso-monto').value);
-            const desc = document.getElementById('swal-egreso-desc').value.trim();
-            if (isNaN(monto) || monto <= 0) {
-                Swal.showValidationMessage('Ingresa un monto válido mayor a 0');
+            const concepto = document.getElementById('swal-concepto').value.trim();
+            const monto = parseFloat(document.getElementById('swal-monto').value);
+            if (!concepto || isNaN(monto) || monto <= 0) {
+                Swal.showValidationMessage('Por favor introduce un concepto válido y un monto mayor a 0');
                 return false;
             }
-            if (!desc) {
-                Swal.showValidationMessage('Debes ingresar una descripción');
-                return false;
-            }
-            return { monto, descripcion: desc };
+            return { concepto, monto };
         }
     });
 
     if (formValues) {
-        try {
-            const { error } = await supabase.from('egresos').insert([{
-                fecha_egreso: fechaFiltro,
+        const { error } = await supabase
+            .from('egresos')
+            .insert([{
+                id_usuario: usuarioActivo.id,
+                turno: turnoActual,
                 monto: formValues.monto,
-                concepto: formValues.descripcion,
-                id_usuario: idUsuarioActivo,
-                turno: turnoActivo
+                concepto: formValues.concepto,
+                fecha_egreso: fechaSeleccionada
             }]);
 
-            if (error) throw error;
-
-            Swal.fire('Egreso Guardado', `Se registró el egreso de S/ ${formValues.monto.toFixed(2)}`, 'success');
-            cargarReportePorFecha(fechaFiltro);
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Error', 'No se pudo registrar el egreso.', 'error');
+        if (error) {
+            console.error(error);
+            Swal.fire('Error', 'No se pudo procesar el egreso en la base de datos.', 'error');
+        } else {
+            Swal.fire('Éxito', 'Egreso añadido correctamente.', 'success');
+            await cargarReporteCompleto(); // Refrescar los componentes e indicadores de dinero
         }
     }
 }
 
-// ========================================================
-// CONTROLADOR INDEPENDIENTE: APERTURA / CIERRE DE TURNO
-// ========================================================
-async function manejarFlujoCajaTurno() {
-    const fechaFiltro = document.getElementById('filtroFechaReporte').value;
-    const idUsuarioActivo = localStorage.getItem("id_usuario_logueado") || "UUID_INVITADO"; 
-    const nombreUsuarioActivo = localStorage.getItem("nombre_recepcionista") || "Recepcionista";
-    const turnoActivo = localStorage.getItem("turno_activo") || "Mañana"; 
+async function renderizarEgresos() {
+    const wrapper = document.getElementById('listaEgresosDinamica');
+    if (!wrapper) return;
+    
+    wrapper.innerHTML = '';
 
-    // Aseguramos que exista el día en la base de datos antes de abrir un turno
-    if (!reporteActualId) {
-        try {
-            const { data: nuevoReporte, error: errMaestro } = await supabase
-                .from('reporte_diario')
-                .insert([{ fecha_reporte: fechaFiltro, estado: 'A', total_turno_manana: 0, total_turno_tarde: 0, total_turno_noche: 0 }])
-                .select().single();
-            if (errMaestro) throw errMaestro;
-            reporteActualId = nuevoReporte.id;
-        } catch (err) {
-            console.error("Error al inicializar el día base:", err);
-            return;
-        }
-    }
+    const { data: egresos, error } = await supabase
+        .from('egresos')
+        .select('*')
+        .eq('fecha_egreso', fechaSeleccionada);
 
-    // SI EL TURNO ESTÁ CERRADO -> VAMOS A ABRIRLO
-    if (estadoCajaActual === 'C') {
-        const saldoSugeridoApertura = await obtenerEfectivoEntregadoTurnoAnterior(fechaFiltro, turnoActivo);
+    if (error) return console.error('Error al traer egresos:', error);
 
-        const { value: montoAperturaIntroducido } = await Swal.fire({
-            title: `Apertura de Turno: ${turnoActivo}`,
-            html: `
-                <p style="font-size: 13px; color: #64748b;">Operador: <b>${nombreUsuarioActivo}</b></p>
-                <p style="font-size: 12px; background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px dashed #cbd5e1;">
-                    💰 El turno anterior te dejó en caja: <b>S/ ${saldoSugeridoApertura.toFixed(2)}</b>
-                </p>
-                <label style="font-size: 13px; font-weight: bold; display: block; margin-top: 10px;">Efectivo físico recibido en recepción:</label>
-            `,
-            input: 'number',
-            inputAttributes: { min: '0', step: '0.10' },
-            inputValue: saldoSugeridoApertura.toFixed(2),
-            showCancelButton: true,
-            confirmButtonText: 'Confirmar e Iniciar',
-            confirmButtonColor: '#800020',
-            cancelButtonText: 'Cancelar',
-            inputValidator: (val) => { if (!val || val < 0) return '¡Digita un monto válido!'; }
-        });
-
-        if (montoAperturaIntroducido !== undefined) {
-            try {
-                const { error } = await supabase.from('caja_turnos').insert([{
-                    fecha: fechaFiltro,
-                    turno: turnoActivo,
-                    id_usuario: idUsuarioActivo,
-                    monto_apertura: parseFloat(montoAperturaIntroducido),
-                    ingresos_efectivo: 0,
-                    egresos_efectivo: 0,
-                    efectivo_real_entregado: 0,
-                    estado: 'A'
-                }]);
-                if (error) throw error;
-                
-                Swal.fire('¡Turno Abierto!', `Caja chica lista para el turno ${turnoActivo}.`, 'success');
-                cargarReportePorFecha(fechaFiltro);
-            } catch (err) {
-                console.error(err);
-                Swal.fire('Error', 'No se pudo abrir el turno.', 'error');
-            }
-        }
-
-    } else {
-        // SI EL TURNO ESTÁ ABIERTO -> VAMOS A CERRARLO
-        const valorFisicoIngresado = parseFloat(document.getElementById('efectivo_fisico_real').value);
-        if (isNaN(valorFisicoIngresado)) {
-            Swal.fire('Atención', 'Digita el conteo de efectivo físico real antes de cerrar.', 'warning');
-            return;
-        }
-
-        const confirmacion = await Swal.fire({
-            title: `¿Cerrar Turno ${turnoActivo}?`,
-            text: `Se guardará tu arqueo de caja bajo el usuario de ${nombreUsuarioActivo}.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#800020',
-            confirmButtonText: 'Sí, Entregar Turno'
-        });
-
-        if (confirmacion.isConfirmed) {
-            try {
-                // 1. Cerrar el turno individual
-                const { error: errTurno } = await supabase.from('caja_turnos').update({
-                    ingresos_efectivo: efectivoSistemaGlobal,
-                    egresos_efectivo: egresosEfectivoGlobal,
-                    efectivo_real_entregado: valorFisicoIngresado,
-                    estado: 'C'
-                }).eq('id', cajaTurnoActualId);
-
-                if (errTurno) throw errTurno;
-
-                // 2. Enviar datos informativos a las tarjetas acumuladoras del Reporte Maestro
-                const colMonto = turnoActivo === 'Mañana' ? 'total_turno_manana' : (turnoActivo === 'Tarde' ? 'total_turno_tarde' : 'total_turno_noche');
-                const colRecep = turnoActivo === 'Mañana' ? 'recep_manana' : (turnoActivo === 'Tarde' ? 'recep_tarde' : 'recep_noche');
-
-                await supabase.from('reporte_diario').update({
-                    [colMonto]: efectivoSistemaGlobal,
-                    [colRecep]: nombreUsuarioActivo
-                }).eq('id', reporteActualId);
-
-                Swal.fire('Turno Finalizado', 'Cierre de turno guardado. Ya puedes cambiar de usuario en el sistema.', 'success');
-                cargarReportePorFecha(fechaFiltro);
-            } catch (err) {
-                console.error(err);
-                Swal.fire('Error', 'No se pudo procesar el cierre.', 'error');
-            }
-        }
-    }
-}
-
-// ========================================================
-// CONTROLADOR INDEPENDIENTE: CIERRE GLOBAL DEL DÍA (MAESTRO)
-// ========================================================
-async function manejarCierreReporteMaestro() {
-    const fechaFiltro = document.getElementById('filtroFechaReporte').value;
-
-    // Buscamos el estado actual del reporte diario maestro
-    try {
-        const { data: rep } = await supabase.from('reporte_diario').select('estado').eq('id', reporteActualId).single();
-        
-        if (rep && rep.estado === 'C') {
-            // El administrador puede reabrir el día si es necesario corregir algo
-            const reabrir = await Swal.fire({
-                title: '¿Reabrir Reporte Diario?',
-                text: 'El día volverá a estar operativo para modificaciones generales.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#d4a017',
-                confirmButtonText: 'Sí, Reabrir Día'
-            });
-
-            if (reabrir.isConfirmed) {
-                await supabase.from('reporte_diario').update({ estado: 'A' }).eq('id', reporteActualId);
-                Swal.fire('Día Abierto', 'El reporte general se encuentra activo nuevamente.', 'success');
-                cargarReportePorFecha(fechaFiltro);
-            }
-            return;
-        }
-
-        // Lógica para bloquear todo el día (Congelar los 3 turnos)
-        const confirmarCierreDia = await Swal.fire({
-            title: '¿Cerrar Reporte Diario General?',
-            text: '¡Atención! Esto consolidará los tres turnos operativos y bloqueará las finanzas de esta fecha.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#1e293b',
-            confirmButtonText: 'Sí, Cerrar Día Completo'
-        });
-
-        if (confirmarCierreDia.isConfirmed) {
-            await supabase.from('reporte_diario').update({ estado: 'C' }).eq('id', reporteActualId);
-            Swal.fire('Día Clausurado', 'El reporte diario maestro ha sido guardado en los libros de auditoría.', 'success');
-            cargarReportePorFecha(fechaFiltro);
-        }
-
-    } catch (err) {
-        console.error("Error al procesar el cierre maestro:", err);
-    }
-}
-
-async function guardarConteoFisicoParcial() {
-    if (!cajaTurnoActualId) return;
-    const valorFisico = parseFloat(document.getElementById('efectivo_fisico_real').value);
-    try {
-        const { error } = await supabase.from('caja_turnos').update({
-            efectivo_real_entregado: isNaN(valorFisico) ? 0 : valorFisico
-        }).eq('id', cajaTurnoActualId);
-
-        if (error) throw error;
-        Swal.fire('Guardado', 'Arqueo parcial del turno actualizado.', 'success');
-    } catch (err) {
-        Swal.fire('Error', 'No se pudo guardar el arqueo parcial.', 'error');
-    }
-}
-
-// ==========================================
-// 6. AUXILIARES DE RENDERIZACIÓN Y AUDITORÍA DE NOMBRES
-// ==========================================
-
-function actualizarEstiloDiferenciaHTML(montoDiferencia) {
-    const contenedorDif = document.getElementById('diferencia');
-    if (Math.abs(montoDiferencia) < 0.01) {
-        contenedorDif.innerText = "S/ 0.00";
-        contenedorDif.style.color = "#64748b";
-    } else if (montoDiferencia < 0) {
-        contenedorDif.innerText = `S/ ${montoDiferencia.toFixed(2)}`;
-        contenedorDif.style.color = "#ef4444";
-    } else {
-        contenedorDif.innerText = `S/ +${montoDiferencia.toFixed(2)}`;
-        contenedorDif.style.color = "#27ae60";
-    }
-}
-
-function renderizarListaEgresos(listaEgresos) {
-    const contenedor = document.getElementById('listaEgresosDinamica');
-    if (listaEgresos.length === 0) {
-        contenedor.innerHTML = `<p style="text-align: center; margin-top: 10px;">No se registraron egresos en este turno.</p>`;
+    if (!egresos || egresos.length === 0) {
+        wrapper.innerHTML = '<p class="empty-notes">Sin egresos registrados hoy</p>';
         return;
     }
-    
-    let html = '<ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px;">';
-    listaEgresos.forEach(egr => {
-        html += `
-            <li style="display: flex; justify-content: space-between; background: #fff1f2; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #e11d48; font-size: 13px;">
-                <span><b>${egr.concepto || 'Gasto'}</b></span>
-                <span style="color: #e11d48; font-weight: bold;">- S/ ${parseFloat(egr.monto).toFixed(2)}</span>
-            </li>`;
+
+    egresos.forEach(eg => {
+        const row = document.createElement('div');
+        row.className = 'expense-row-item';
+        row.innerHTML = `
+            <span class="expense-concept">${eg.concepto} <small class="text-muted">(${eg.turno})</small></span>
+            <span class="expense-val">- S/ ${eg.monto.toFixed(2)}</span>
+        `;
+        wrapper.appendChild(row);
     });
-    html += '</ul>';
-    contenedor.innerHTML = html;
 }
-function actualizarCamposTurnosYEstado(reporte, estadoDelTurno) {
-    const btnTurno = document.getElementById('btnAccionReporteDiario');
-    const btnMaestro = document.getElementById('btnAccionReporteMaestro'); 
-    const lblEstado = document.getElementById('lbl-estado-caja');
-    const inputFisico = document.getElementById('efectivo_fisico_real');
-    const obs = document.getElementById('observaciones');
-    const btnGuardar = document.getElementById('btnGuardarArqueo');
-    
-    // Botones secundarios a proteger
-    const btnEgreso = document.getElementById('btnRegistrarEgreso');
-    const btnOcurrencia = document.getElementById('btnAgregarOcurrencia');
 
-    // Inyectar datos de los turnos en las tarjetas acumuladoras
-    document.getElementById('recep_manana').innerHTML = `Recepcionista: <b>${reporte.recep_manana || '-'}</b>`;
-    document.getElementById('total_turno_manana').innerText = `S/ ${parseFloat(reporte.total_turno_manana || 0).toFixed(2)}`;
-    document.getElementById('recep_tarde').innerHTML = `Recepcionista: <b>${reporte.recep_tarde || '-'}</b>`;
-    document.getElementById('total_turno_tarde').innerText = `S/ ${parseFloat(reporte.total_turno_tarde || 0).toFixed(2)}`;
-    document.getElementById('recep_noche').innerHTML = `Recepcionista: <b>${reporte.recep_noche || '-'}</b>`;
-    document.getElementById('total_turno_noche').innerText = `S/ ${parseFloat(reporte.total_turno_noche || 0).toFixed(2)}`;
+// ==========================================
+// 4. BITÁCORA DE OCURRENCIAS (`ocurrencias`)
+// ==========================================
+async function guardarOcurrencia() {
+    const containers = document.querySelectorAll('.log-column');
+    let turnoNota = '';
+    let descripcionNota = '';
+    let textAreaTarget = null;
 
-    // 🟢 EVALUACIÓN DEL REPORTE MAESTRO DIARIO (GLOBAL)
-    if (btnMaestro) {
-        if (reporte.estado === 'C') {
-            btnMaestro.innerHTML = `<i class="fa-solid fa-folder-closed"></i> Reporte Diario: CERRADO`;
-            btnMaestro.className = "btn-maestro-danger"; 
-        } else {
-            btnMaestro.innerHTML = `<i class="fa-solid fa-folder-open"></i> Reporte Diario: ABIERTO`;
-            btnMaestro.className = "btn-maestro-success";
+    // Localizar cuál de los textareas por turnos contiene el texto digitado
+    containers.forEach(col => {
+        const h6 = col.querySelector('h6')?.innerText || '';
+        const txtArea = col.querySelector('.textarea-log');
+        if (txtArea && txtArea.value.trim() !== '') {
+            turnoNota = h6.includes('MAÑANA') ? 'Mañana' : h6.includes('TARDE') ? 'Tarde' : 'Noche';
+            descripcionNota = txtArea.value.trim();
+            textAreaTarget = txtArea;
         }
+    });
+
+    if (!descripcionNota) {
+        return Swal.fire('Atención', 'Escribe una ocurrencia o nota en el cuadro del turno correspondiente antes de guardar.', 'warning');
     }
 
-    // 🔵 EVALUACIÓN DEL TURNO OPERATIVO ACTUAL
-    if (estadoDelTurno === 'A') {
-        lblEstado.innerText = "TURNO: ABIERTO";
-        lblEstado.style.color = "#27ae60";
-        btnTurno.innerHTML = `<i class="fa-solid fa-lock"></i> Cerrar Turno`;
-        btnTurno.className = "btn-reporte-danger";
-        btnTurno.disabled = false; // Se mantiene activo para que puedan cerrar
+    const { error } = await supabase
+        .from('ocurrencias')
+        .insert([{
+            fecha: fechaSeleccionada,
+            turno: turnoNota,
+            usuario_id: usuarioActivo.id,
+            usuario_nombre: usuarioActivo.nombres,
+            descripcion: descripcionNota
+        }]);
 
-        // Habilitar campos y operaciones del turno
-        inputFisico.disabled = false;
-        obs.disabled = false;
-        btnGuardar.disabled = false;
-        if (btnEgreso) btnEgreso.disabled = false;
-        if (btnOcurrencia) btnOcurrencia.disabled = false;
-
+    if (error) {
+        console.error(error);
+        Swal.fire('Error', 'Problema al registrar la ocurrencia.', 'error');
     } else {
-        lblEstado.innerText = "TURNO: CERRADO";
-        lblEstado.style.color = "#ef4444";
-        btnTurno.innerHTML = `<i class="fa-solid fa-folder-open"></i> Abrir Turno`;
-        btnTurno.className = "btn-reporte-success";
-        btnTurno.disabled = false;
-
-        // Deshabilitar campos y operaciones del turno
-        inputFisico.disabled = true;
-        obs.disabled = true;
-        btnGuardar.disabled = true;
-        if (btnEgreso) btnEgreso.disabled = true;
-        if (btnOcurrencia) btnOcurrencia.disabled = true;
-    }
-
-    // 🔒 PROTECCIÓN MÁXIMA: Si el día completo está cerrado por administración, congelamos todo en cascada
-    if (reporte.estado === 'C') {
-        lblEstado.innerText = "DÍA CLAUSURADO (AUDITORÍA)";
-        lblEstado.style.color = "#475569"; // Gris oscuro corporativo
-        
-        // Bloquear la capacidad de reabrir turnos individuales
-        btnTurno.innerHTML = `<i class="fa-solid fa-ban"></i> Turno Bloqueado`;
-        btnTurno.className = "btn-reporte-disabled"; // Dale estilos grises en tu CSS
-        btnTurno.disabled = true;
-        
-        // Asegurar que todo lo demás permanezca cerrado
-        inputFisico.disabled = true;
-        obs.disabled = true;
-        btnGuardar.disabled = true;
-        if (btnEgreso) btnEgreso.disabled = true;
-        if (btnOcurrencia) btnOcurrencia.disabled = true;
+        if (textAreaTarget) textAreaTarget.value = ''; // Vaciar caja de texto
+        Swal.fire('Guardado', 'Incidencia añadida a la bitácora del turno.', 'success');
+        await renderizarOcurrencias();
     }
 }
 
-function renderizarCajaCerradaVacia() {
-    estadoCajaActual = 'C'; 
-    document.getElementById('total_ingresos_sistema').innerText = "S/ 0.00";
-    document.getElementById('efectivo_esperado_cierre').innerText = "S/ 0.00";
-    document.getElementById('tbl-sistema-efectivo').innerText = "S/ 0.00";
-    document.getElementById('monto-apertura').innerText = "S/ 0.00";
-    
-    const idsCeros = ['total_efectivo','total_yape','total_transferencia','total_tarjeta','total_usd_en_soles','total_consumos','total_egresos_efectivo','total_turno_manana','total_turno_tarde','total_turno_noche'];
-    idsCeros.forEach(id => document.getElementById(id).innerText = "S/ 0.00");
+async function renderizarOcurrencias() {
+    const columnas = {
+        'Mañana': document.getElementById('columna-notes-manana') || document.getElementById('columna-notas-manana'),
+        'Tarde': document.getElementById('columna-notes-tarde') || document.getElementById('columna-notas-tarde'),
+        'Noche': document.getElementById('columna-notes-noche') || document.getElementById('columna-notas-noche')
+    };
 
-    document.getElementById('efectivo_fisico_real').value = '';
-    document.getElementById('efectivo_fisico_real').disabled = true;
-    document.getElementById('diferencia').innerText = "S/ 0.00";
-    document.getElementById('diferencia').style.color = "#64748b";
-    
-    document.getElementById('observaciones').value = '';
-    document.getElementById('observaciones').disabled = true;
-    document.getElementById('btnGuardarArqueo').disabled = true;
+    // Limpieza inicial de contenedores
+    Object.values(columnas).forEach(col => { if (col) col.innerHTML = ''; });
 
-    const lblEstado = document.getElementById('lbl-estado-caja');
-    lblEstado.innerText = "TURNO NO OPERATIVO";
-    lblEstado.style.color = "#64748b";
+    const { data: notas, error } = await supabase
+        .from('ocurrencias')
+        .select('*')
+        .eq('fecha', fechaSeleccionada);
 
-    const btnAccion = document.getElementById('btnAccionReporteDiario');
-    btnAccion.innerHTML = `<i class="fa-solid fa-folder-open"></i> Abrir Turno`;
-    btnAccion.className = "btn-reporte-success";
-}
+    if (error) return console.error('Error al cargar ocurrencias:', error);
 
-function resetearKPIsYNotasVacias() {
-    document.getElementById('num_checkins').innerText = "0";
-    document.getElementById('num_checkouts').innerText = "0";
-    document.getElementById('num_reservas_nuevas').innerText = "0";
-    document.getElementById('columna-notas-manana').innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 10px;">Sin notas.</p>`;
-    document.getElementById('columna-notas-tarde').innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 10px;">Sin notas.</p>`;
-    document.getElementById('columna-notas-noche').innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 10px;">Sin notas.</p>`;
-}
+    const conteo = { 'Mañana': 0, 'Tarde': 0, 'Noche': 0 };
 
-function mostrarControlDeTurno() {
-    const turno = localStorage.getItem("turno_activo") || "Mañana";
-    const recepcionista = localStorage.getItem("nombre_recepcionista") || "Fernanda Salinas";
+    notas?.forEach(nota => {
+        const col = columnas[nota.turno];
+        if (col) {
+            conteo[nota.turno]++;
+            // Formatear la hora de creación de forma amigable (ej: 03:45 PM)
+            const horaStr = new Date(nota.creado_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true });
+            
+            const item = document.createElement('div');
+            item.className = 'toast-note';
+            item.innerHTML = `
+                <span class="toast-meta">${horaStr} — <strong>${nota.usuario_nombre || 'Personal'}</strong></span>
+                <p class="toast-desc">${nota.descripcion}</p>
+            `;
+            col.appendChild(item);
+        }
+    });
 
-    Swal.fire({
-        title: '⏰ Control de Turno Activo',
-        html: `
-            <div style="text-align: left; font-size: 14px; line-height: 1.8;">
-                <p>👤 <b>Recepcionista:</b> ${recepcionista}</p>
-                <p>📅 <b>Turno asignado:</b> ${turno}</p>
-                <p>📍 <b>Sede:</b> Hotel Central Trujillo</p>
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 10px 0;">
-                <small style="color: #64748b;">Recuerda registrar todas las ocurrencias y realizar el arqueo antes de que finalice tu horario operativo.</small>
-            </div>
-        `,
-        icon: 'info',
-        confirmButtonColor: '#d4a017'
+    // Colocar el marcador por defecto si el turno no registra incidencias
+    Object.keys(columnas).forEach(turno => {
+        if (conteo[turno] === 0 && columnas[turno]) {
+            columnas[turno].innerHTML = '<p class="empty-notes">Sin ocurrencias registradas en este turno</p>';
+        }
     });
 }
 
-async function obtenerEfectivoEntregadoTurnoAnterior(fechaActual, turnoActual) {
-    let fechaBuscar = fechaActual;
-    let turnoBuscar = '';
-
-    // Determinar cuál fue el turno anterior
-    if (turnoActual === 'Tarde') {
-        turnoBuscar = 'Mañana';
-    } else if (turnoActual === 'Noche') {
-        turnoBuscar = 'Tarde';
-    } else if (turnoActual === 'Mañana') {
-        turnoBuscar = 'Noche';
-        // Si es mañana, el turno anterior fue la noche del día operativo anterior
-        const fechaTemp = new Date(fechaActual);
-        fechaTemp.setDate(fechaTemp.getDate() - 1);
-        fechaBuscar = fechaTemp.toLocaleDateString('sv-SE', { timeZone: 'America/Lima' });
-    }
-
-    try {
-        const { data, error } = await supabase
-            .from('caja_turnos')
-            .select('efectivo_real_entregado')
-            .eq('fecha', fechaBuscar)
-            .eq('turno', turnoBuscar)
-            .maybeSingle();
-
-        if (error) throw error;
-
-        // Si el turno anterior existe y se cerró, devolvemos su efectivo real entregado.
-        // Si no existe (por ejemplo, un inicio de mes o día caído), devolvemos una base por defecto (S/ 100.00).
-        return data && data.efectivo_real_entregado !== null ? parseFloat(data.efectivo_real_entregado) : 100.00;
-
-    } catch (err) {
-        console.error("Error al recuperar saldo del turno anterior:", err);
-        return 100.00; // Saldo de contingencia
-    }
+// ==========================================
+// FUNCIONES AUXILIARES DE SOPORTE DOM
+// ==========================================
+function asignarTextoPorId(id, texto) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = texto;
 }
 
-function cargarDatosSesionUsuario() {
-    const nombre = localStorage.getItem('nombre_recepcionista') || "Fernanda Salinas";
-    const rol = localStorage.getItem('userRole') || "Administrador";
-    if (document.getElementById('userName')) document.getElementById('userName').innerText = nombre;
-    if (document.getElementById('userRole')) document.getElementById('userRole').innerText = rol;
-
-    const btnLogout = document.getElementById('btnLogout');
-    if (btnLogout) {
-        btnLogout.addEventListener('click', () => {
-            localStorage.clear();
-            window.location.href = "index.html";
-        });
+// Validación de Fechas para Reservas (Reutilizable en tus otros módulos de reserva)
+export function validarFechasReserva(checkInFecha, checkOutFecha) {
+    if (new Date(checkOutFecha) < new Date(checkInFecha)) {
+        alert("¡Atención! La fecha de salida (Check-Out) no puede ser anterior a la fecha de entrada (Check-In).");
+        return false;
     }
+    return true;
 }
