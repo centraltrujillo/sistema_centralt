@@ -1,4 +1,4 @@
-import { supabase } from './config.js';
+import { client as supabase } from './config.js';
 
 // ==========================================
 // VARIABLES DE ESTADO GLOBAL DEL REPORTE
