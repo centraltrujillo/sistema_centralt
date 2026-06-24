@@ -102,22 +102,22 @@ function obtenerUsuarioSesion() {
 }
 
 // ==========================================
-// 🛠️ ESCUCHAS EN VIVO PARA LAS TARJETAS (NUEVO)
+// 🛠️ ESCUCHAS EN VIVO PARA LAS TARJETAS
 // ==========================================
 function configurarEventosTarjetasCaja() {
-    // Monitorear entradas del teclado en los inputs físicos de cada tarjeta
     document.querySelectorAll('.input-fisico-real').forEach(input => {
         input.addEventListener('input', (e) => {
             const card = e.target.closest('.shift-card');
-            calcularDiferenciaEnVivo(card);
+            if (card) calcularDiferenciaEnVivo(card);
         });
     });
 
-    // Delegación para botones de cierre interno por tarjeta
     document.querySelectorAll('.btnCerrarTurno').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const turno = e.target.closest('.btnCerrarTurno').dataset.turno;
-            cerrarTurnoDesdeTarjeta(turno);
+            const contenedorBtn = e.target.closest('.btnCerrarTurno');
+            if (contenedorBtn && contenedorBtn.dataset.turno) {
+                cerrarTurnoDesdeTarjeta(contenedorBtn.dataset.turno);
+            }
         });
     });
 }
@@ -197,9 +197,9 @@ async function gestionarReporteMaestro() {
             title: 'Cerrar Reporte Diario Maestro',
             html: `
                 <div style="text-align: left; font-size: 14px; line-height: 2;">
-                    <p><b>Monto de Apertura:</b> S/ ${reporte.monto_apertura.toFixed(2)}</p>
-                    <p><b>Ingresos Totales en Efectivo:</b> S/ ${reporte.total_efectivo.toFixed(2)}</p>
-                    <p><b>Gastos / Egresos Realizados:</b> <span style="color: #b22222;">- S/ ${reporte.total_egresos_efectivo.toFixed(2)}</span></p>
+                    <p><b>Monto de Apertura:</b> S/ ${(reporte.monto_apertura || 0).toFixed(2)}</p>
+                    <p><b>Ingresos Totales en Efectivo:</b> S/ ${(reporte.total_efectivo || 0).toFixed(2)}</p>
+                    <p><b>Gastos / Egresos Realizados:</b> <span style="color: #b22222;">- S/ ${(reporte.total_egresos_efectivo || 0).toFixed(2)}</span></p>
                     <hr>
                     <label for="swal-fisico-maestro"><b>Efectivo Físico Real Total en Bóveda/Caja Central (S/):</b></label>
                     <input id="swal-fisico-maestro" type="number" class="swal2-input" placeholder="0.00" step="0.10">
@@ -262,7 +262,6 @@ async function modalControlTurnoCaja() {
         .select('*')
         .eq('fecha', fechaSeleccionada);
 
-    // Si el turno actual ya existe y está abierto, redirigir directo al modal de cierre
     const turnoExistente = turnosHoy?.find(t => t.turno === turnoActual);
     if (turnoExistente) {
         if (turnoExistente.estado === 'A') {
@@ -272,23 +271,22 @@ async function modalControlTurnoCaja() {
         }
     }
 
-    // Verificar que no existan otros turnos en estado Abierto en este momento
     if (turnosHoy && turnosHoy.some(t => t.estado === 'A')) {
         return Swal.fire('Error', 'Ya existe un turno activo en el sistema. Debe cerrarse antes de proceder.', 'warning');
     }
 
-    // Calcular Arrastre Dinámico basado en la tarjeta HTML del turno previo
     let montoArraigadoSugerido = 0.00;
     const turnosOrdenados = ['Mañana', 'Tarde', 'Noche'];
     const idx = turnosOrdenados.indexOf(turnoActual);
 
     if (turnoActual === 'Mañana') {
-        montoArraigadoSugerido = 100.00; // Base profesional por defecto
+        montoArraigadoSugerido = 100.00; 
     } else if (idx > 0) {
         const turnoAnterior = turnosOrdenados[idx - 1];
         const cardAnterior = document.getElementById(`card-${turnoAnterior}`);
         if (cardAnterior) {
-            montoArraigadoSugerido = Number(cardAnterior.querySelector('.input-fisico-real').value || 0);
+            const inputFisicoAnt = cardAnterior.querySelector('.input-fisico-real');
+            montoArraigadoSugerido = inputFisicoAnt ? Number(inputFisicoAnt.value || 0) : 0;
         }
     }
 
@@ -338,10 +336,14 @@ async function modalControlTurnoCaja() {
     }
 }
 
-// Cierre gatillado desde el botón superior del Header
 async function ejecutarArqueoCierreSuperior(turnoData) {
     const card = document.getElementById(`card-${turnoData.turno}`);
-    const esperadoSujeto = card ? Number(card.querySelector('.txt-esperado').innerText.replace(/[^0-9.-]+/g,"")) : turnoData.efectivo_esperado;
+    let esperadoSujeto = turnoData.efectivo_esperado || 0;
+    
+    if (card) {
+        const txtEsp = card.querySelector('.txt-esperado');
+        if (txtEsp) esperadoSujeto = Number(txtEsp.innerText.replace(/[^0-9.-]+/g,""));
+    }
 
     const { value: efectivoReal } = await Swal.fire({
         title: `Cierre de Caja - ${turnoData.turno}`,
@@ -371,12 +373,12 @@ async function ejecutarArqueoCierreSuperior(turnoData) {
     }
 }
 
-// Cierre gatillado directamente desde la tarjeta física en el grid
 async function cerrarTurnoDesdeTarjeta(turno) {
     const card = document.getElementById(`card-${turno}`);
+    if (!card) return;
     const inputReal = card.querySelector('.input-fisico-real');
     
-    if (inputReal.value === "") {
+    if (!inputReal || inputReal.value === "") {
         Swal.fire('Atención', 'Por favor, ingresa el conteo físico real en la tarjeta antes de procesar el cierre.', 'info');
         return;
     }
@@ -387,8 +389,15 @@ async function cerrarTurnoDesdeTarjeta(turno) {
 
 async function procesarCierreBaseDatos(turno, efectivoReal) {
     const card = document.getElementById(`card-${turno}`);
-    const ingresos = card ? Number(card.querySelector('.txt-ingresos').innerText.replace(/[^0-9.-]+/g,"")) : 0;
-    const egresos = card ? Number(card.querySelector('.txt-egresos').innerText.replace(/[^0-9.-]+/g,"")) : 0;
+    let ingresos = 0;
+    let egresos = 0;
+
+    if (card) {
+        const txtIng = card.querySelector('.txt-ingresos');
+        const txtEgr = card.querySelector('.txt-egresos');
+        if (txtIng) ingresos = Number(txtIng.innerText.replace(/[^0-9.-]+/g,""));
+        if (txtEgr) egresos = Number(txtEgr.innerText.replace(/[^0-9.-]+/g,""));
+    }
 
     const { error } = await supabase
         .from('caja_turnos')
@@ -412,13 +421,17 @@ async function procesarCierreBaseDatos(turno, efectivoReal) {
 async function renderizarCajaTurnos() {
     const turnosDisponibles = ['Mañana', 'Tarde', 'Noche'];
     
-    // 1. Obtener cierres explícitos de la tabla caja_turnos
-    const { data: turnosGuardados } = await supabase
+    // CORRECCIÓN SUPABASE: Relación explícita mediante llave foránea id_usuario
+    const { data: turnosGuardados, error: errTurnos } = await supabase
         .from('caja_turnos')
-        .select('*, usuario')
+        .select('*, id_usuario(*)') 
         .eq('fecha', fechaSeleccionada);
 
-    // 2. Obtener sumatorias financieras reales en tiempo de ejecución de las tablas transaccionales
+    if (errTurnos) {
+        console.error("❌ Error en la consulta de caja_turnos:", errTurnos);
+        return; 
+    }
+
     const { data: pagosEfectivo } = await supabase
         .from('pagos')
         .select('monto_soles, turno')
@@ -433,7 +446,6 @@ async function renderizarCajaTurnos() {
     const mapaTurnos = { 'Mañana': null, 'Tarde': null, 'Noche': null };
     turnosGuardados?.forEach(t => { mapaTurnos[t.turno] = t; });
 
-    // Iterar en orden secuencial hotelero estricto para encadenar las cajas iniciales
     for (let i = 0; i < turnosDisponibles.length; i++) {
         const turnoLista = turnosDisponibles[i];
         const card = document.getElementById(`card-${turnoLista}`);
@@ -460,44 +472,40 @@ async function renderizarCajaTurnos() {
 
         const efectivoEsperado = (cajaInicial + ingresosTurno) - egresosTurno;
 
-        // Inyectar datos financieros en los elementos hijos de la tarjeta
-        card.querySelector('.txt-apertura').innerText = `S/ ${cajaInicial.toFixed(2)}`;
-        card.querySelector('.txt-ingresos').innerText = `+ S/ ${ingresosTurno.toFixed(2)}`;
-        card.querySelector('.txt-egresos').innerText = `- S/ ${egresosTurno.toFixed(2)}`;
-        card.querySelector('.txt-esperado').innerText = `S/ ${efectivoEsperado.toFixed(2)}`;
+        // Inyecciones seguras protegiendo el DOM con encadenamiento opcional (?.)
+        if (card.querySelector('.txt-apertura')) card.querySelector('.txt-apertura').innerText = `S/ ${cajaInicial.toFixed(2)}`;
+        if (card.querySelector('.txt-ingresos')) card.querySelector('.txt-ingresos').innerText = `+ S/ ${ingresosTurno.toFixed(2)}`;
+        if (card.querySelector('.txt-egresos')) card.querySelector('.txt-egresos').innerText = `- S/ ${egresosTurno.toFixed(2)}`;
+        if (card.querySelector('.txt-esperado')) card.querySelector('.txt-esperado').innerText = `S/ ${efectivoEsperado.toFixed(2)}`;
 
         const badge = card.querySelector('.status-badge');
         const inputFisico = card.querySelector('.input-fisico-real');
         const btnCerrar = card.querySelector('.btnCerrarTurno');
+        const recepNameEl = card.querySelector('.recep-name');
 
         if (datosTurno) {
-            card.querySelector('.recep-name').innerText = datosTurno.usuarios?.nombre_completo || usuarioActivo.nombres;
+            // Muestra el nombre_completo del usuario que abrió la caja si la relación existe
+            if (recepNameEl) recepNameEl.innerText = datosTurno.id_usuario?.nombre_completo || usuarioActivo.nombres;
             
             if (datosTurno.estado === 'A') {
-                badge.innerText = "Abierto";
-                badge.className = "badge badge-success";
-                inputFisico.disabled = false;
-                btnCerrar.disabled = false;
+                if (badge) { badge.innerText = "Abierto"; badge.className = "badge badge-success"; }
+                if (inputFisico) inputFisico.disabled = false;
+                if (btnCerrar) btnCerrar.disabled = false;
             } else {
-                badge.innerText = "Cerrado";
-                badge.className = "badge badge-muted";
-                inputFisico.value = datosTurno.efectivo_real_entregado;
-                inputFisico.disabled = true;
-                btnCerrar.disabled = true;
+                if (badge) { badge.innerText = "Cerrado"; badge.className = "badge badge-muted"; }
+                if (inputFisico) { inputFisico.value = datosTurno.efectivo_real_entregado; inputFisico.disabled = true; }
+                if (btnCerrar) btnCerrar.disabled = true;
                 calcularDiferenciaEnVivo(card);
             }
         } else {
-            card.querySelector('.recep-name').innerText = "-";
-            badge.innerText = "Cerrado";
-            badge.className = "badge badge-muted";
-            inputFisico.value = "";
-            inputFisico.disabled = true;
-            btnCerrar.disabled = true;
+            if (recepNameEl) recepNameEl.innerText = "-";
+            if (badge) { badge.innerText = "Cerrado"; badge.className = "badge badge-muted"; }
+            if (inputFisico) { inputFisico.value = ""; inputFisico.disabled = true; }
+            if (btnCerrar) btnCerrar.disabled = true;
             resetearEstilosTarjeta(turnoLista);
         }
     }
 
-    // --- MANEJO DEL BOTÓN MAESTRO DEL HEADER SUPERIOR ---
     const btnAbrirTurnoGlobal = document.getElementById('btnAccionReporteDiario');
     if (btnAbrirTurnoGlobal) {
         const turnoActualData = mapaTurnos[turnoActual];
@@ -515,8 +523,13 @@ async function renderizarCajaTurnos() {
 }
 
 function calcularDiferenciaEnVivo(card) {
-    const esperado = Number(card.querySelector('.txt-esperado').innerText.replace(/[^0-9.-]+/g,""));
-    const real = Number(card.querySelector('.input-fisico-real').value || 0);
+    if (!card) return;
+    const txtEsp = card.querySelector('.txt-esperado');
+    const inputReal = card.querySelector('.input-fisico-real');
+    if (!txtEsp || !inputReal) return;
+
+    const esperado = Number(txtEsp.innerText.replace(/[^0-9.-]+/g,""));
+    const real = Number(inputReal.value || 0);
     const diferencia = real - esperado;
 
     const txtDiff = card.querySelector('.txt-diferencia');
@@ -557,6 +570,22 @@ function resetearEstilosTarjeta(turno) {
 // ==========================================
 // RENDERS VISUALES AUXILIARES (KPIS Y EGRESOS)
 // ==========================================
+function asignarTextoPorId(id, texto) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = texto;
+}
+
+function resetearValoresCero() {
+    asignarTextoPorId('total_efectivo', 'S/ 0.00');
+    asignarTextoPorId('total_yape', 'S/ 0.00');
+    asignarTextoPorId('total_transferencia', 'S/ 0.00');
+    asignarTextoPorId('total_tarjeta', 'S/ 0.00');
+    asignarTextoPorId('total_usd_en_soles', '$ 0.00');
+    asignarTextoPorId('num_checkins', '0');
+    asignarTextoPorId('num_checkouts', '0');
+    asignarTextoPorId('num_reservas_nuevas', '0');
+}
+
 async function renderizarKPISyPagos() {
     const reporte = await supabase.from('reporte_diario').select('*').eq('fecha_reporte', fechaSeleccionada).maybeSingle();
     const totalIngresosEl = document.getElementById('total_ingresos_sistema');
@@ -627,8 +656,9 @@ async function renderizarKPISyPagos() {
     const nuevas = await supabase.from('reservas').select('*', { count: 'exact', head: true }).gte('created_at', `${fechaSeleccionada}T00:00:00.000Z`).lte('created_at', `${fechaSeleccionada}T23:59:59.999Z`);
     asignarTextoPorId('num_reservas_nuevas', nuevas.count || 0);
 }
+
 // ==========================================
-// 🛡️ VALIDADOR DE BLOQUEO GENERAL (NUEVO)
+// 🛡️ VALIDADOR DE BLOQUEO GENERAL
 // ==========================================
 async function verificarEstadoReporteMaestro() {
     const { data: reporte } = await supabase
@@ -639,18 +669,17 @@ async function verificarEstadoReporteMaestro() {
 
     const estaAbierto = (reporte && reporte.estado === 'A');
 
-    // Deshabilitar o habilitar textareas de ocurrencias
     document.querySelectorAll('.textarea-log').forEach(tx => {
         tx.disabled = !estaAbierto;
         if (!estaAbierto) {
             tx.placeholder = "🔒 Reporte cerrado o no inicializado. Bloqueado.";
         } else {
-            const turnoCol = tx.closest('.log-column').querySelector('h6').innerText;
+            const h6El = tx.closest('.log-column')?.querySelector('h6');
+            const turnoCol = h6El ? h6El.innerText : 'este';
             tx.placeholder = `Escribe una ocurrencia para el turno ${turnoCol.toLowerCase()}...`;
         }
     });
 
-    // Deshabilitar botones de acción si no está abierto
     const btnEgreso = document.getElementById('btnRegistrarEgreso');
     const btnOcurrencia = document.getElementById('btnAgregarOcurrencia');
     
@@ -661,7 +690,7 @@ async function verificarEstadoReporteMaestro() {
 }
 
 // ==========================================
-// 💸 GESTIÓN DE EGRESOS (MÉTODO MEJORADO)
+// 💸 GESTIÓN DE EGRESOS 
 // ==========================================
 async function registrarEgreso() {
     const reporteAbierto = await verificarEstadoReporteMaestro();
@@ -734,7 +763,7 @@ async function renderizarEgresos() {
 }
 
 // ==========================================
-// 📝 GESTIÓN DE OCURRENCIAS Y BITÁCORA (NUEVO)
+// 📝 GESTIÓN DE OCURRENCIAS Y BITÁCORA
 // ==========================================
 async function registrarOcurrenciaBitacora() {
     const reporteAbierto = await verificarEstadoReporteMaestro();
@@ -742,7 +771,6 @@ async function registrarOcurrenciaBitacora() {
         return Swal.fire('Bloqueado', 'El reporte no se encuentra activo.', 'warning');
     }
 
-    // Buscaremos qué textarea de qué columna tiene texto actualmente escrito
     let textoDetectado = '';
     let turnoDestino = '';
     let textareaObjetivo = null;
@@ -781,7 +809,7 @@ async function registrarOcurrenciaBitacora() {
         return Swal.fire('Error', 'No se pudo guardar la nota en la bitácora.', 'error');
     }
 
-    textareaObjetivo.value = ''; // Limpiar el campo
+    if (textareaObjetivo) textareaObjetivo.value = ''; 
     Swal.fire('Guardado', `Ocurrencia añadida al turno ${turnoDestino}.`, 'success');
     await renderizarOcurrencias();
 }
@@ -793,7 +821,6 @@ async function renderizarOcurrencias() {
         'Noche': document.getElementById('columna-notas-noche')
     };
 
-    // Limpiar contenedores
     Object.values(wrappers).forEach(el => { if (el) el.innerHTML = ''; });
 
     const { data: ocurrencias, error } = await supabase
@@ -804,7 +831,6 @@ async function renderizarOcurrencias() {
 
     if (error) return;
 
-    // Clasificar y renderizar en su columna respectiva utilizando tu diseño CSS (.toast-note)
     const contadores = { 'Mañana': 0, 'Tarde': 0, 'Noche': 0 };
 
     ocurrencias?.forEach(oc => {
@@ -812,7 +838,6 @@ async function renderizarOcurrencias() {
         if (wrapper) {
             contadores[oc.turno]++;
             
-            // Formatear hora de creación de manera legible (hh:mm a.m./p.m.)
             const horaFormateada = oc.creado_at 
                 ? new Date(oc.creado_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true })
                 : '--:--';
@@ -827,19 +852,9 @@ async function renderizarOcurrencias() {
         }
     });
 
-    // Poner aviso de vacío si no hay notas en la columna
     Object.keys(wrappers).forEach(turno => {
         if (contadores[turno] === 0 && wrappers[turno]) {
             wrappers[turno].innerHTML = '<p class="empty-notes">Sin ocurrencias registradas</p>';
         }
     });
-}
-
-function resetearValoresCero() {
-    ['num_checkins', 'num_checkouts', 'num_reservas_nuevas'].forEach(id => asignarTextoPorId(id, '0'));
-}
-
-function asignarTextoPorId(id, texto) {
-    const el = document.getElementById(id);
-    if (el) el.innerText = texto;
 }
