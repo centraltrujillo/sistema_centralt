@@ -7,7 +7,7 @@ let fechaSeleccionada = '';
 let turnoActual = 'Mañana';
 let usuarioActivo = {
     id: null,
-    nombres: 'Recepcionista'
+    nombres: null
 };
 
 // ==========================================
@@ -424,7 +424,7 @@ async function renderizarCajaTurnos() {
     // CORRECCIÓN SUPABASE: Relación explícita mediante llave foránea id_usuario
     const { data: turnosGuardados, error: errTurnos } = await supabase
         .from('caja_turnos')
-        .select('*, id_usuario(*)') 
+.select('*, usuarios!id_usuario(*)')
         .eq('fecha', fechaSeleccionada);
 
     if (errTurnos) {
@@ -858,3 +858,31 @@ async function renderizarOcurrencias() {
         }
     });
 }
+
+
+// --- 5. ENLACE DE LOGOUT SEGURO ---
+document.getElementById('btnLogout')?.addEventListener('click', () => {
+    Swal.fire({
+        title: '¿Cerrar sesión?',
+        text: "Cerrarás sesión del Sistema Hotel Central",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#800020',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, salir',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                await supabase.auth.signOut();
+                localStorage.removeItem("id_usuario_logueado");
+                localStorage.removeItem("nombre_recepcionista");
+                localStorage.removeItem("turno_activo");
+                window.location.href = "index.html";
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error.message);
+            }
+        }
+    });
+});
