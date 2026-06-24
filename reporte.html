@@ -59,9 +59,7 @@
                     <button id="btnAccionReporteDiario" class="btn-action-primary">
                         <i class="fa-solid fa-door-open"></i> Abrir Turno
                     </button>
-                    <button id="btnControlTurno" class="btn-action-warning" title="Control de Turno">
-                        <i class="fa-solid fa-clock"></i>
-                    </button>
+
                     <button id="btnRegistrarEgreso" class="btn-action-danger">
                         <i class="fa-solid fa-minus-circle"></i> Registrar Egreso
                     </button>
@@ -71,7 +69,6 @@
                     <div class="text-right">
                         <span id="userName">Cargando...</span>
                         <br>
-                        <small id="userRole">Verificando rol...</small>
                     </div>
                     <button id="btnLogout" title="Cerrar Sesión">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -138,104 +135,115 @@
                         <strong id="total_tarjeta">S/ 0.00</strong>
                     </div>
                     <div class="pm-card">
-                        <span class="pm-title"><i class="fa-solid fa-dollar-sign text-amber"></i> Dólares (S/)</span>
-                        <strong id="total_usd_en_soles">S/ 0.00</strong>
+    <span class="pm-title"><i class="fa-solid fa-dollar-sign text-amber"></i> Dólares (USD)</span>
+    <strong id="total_usd_en_soles">$ 0.00</strong>
+</div>
+                </div>
+            </section>
+
+<section class="content-block">
+    <div class="block-header">
+        <h3>CONTROL DE CAJA CHICA POR TURNO</h3>
+    </div>
+    
+    <div class="shifts-layout-grid">
+        <article class="shift-card border-top-zocalo" id="card-Mañana">
+            <div class="shift-card-header">
+                <span class="shift-name">🌞 Mañana <small>07:00 - 14:00</small></span>
+                <span class="badge status-badge">Cerrado</span>
+            </div>
+            <div class="shift-card-body">
+                <p class="shift-user"><i class="fa-solid fa-user-clock"></i> <span class="recep-name">Cargando...</span></p>
+                
+                <div class="shift-row"><span>Caja inicial</span><strong class="txt-apertura">S/ 0.00</strong></div>
+                <div class="shift-row txt-success"><span>Ingresos efectivo</span><strong class="txt-ingresos">+ S/ 0.00</strong></div>
+                <div class="shift-row txt-danger"><span>Total egresos</span><strong class="txt-egresos">- S/ 0.00</strong></div>
+                
+                <hr class="shift-divider">
+                <div class="shift-row total-highlight"><span>Efectivo esperado</span><strong class="txt-esperado">S/ 0.00</strong></div>
+                
+                <div class="conteo-real-box">
+                    <label>CONTEO FÍSICO REAL:</label>
+                    <div class="input-inline-group">
+                        <input type="number" class="input-fisico-real" placeholder="0.00" step="0.10" disabled>
                     </div>
                 </div>
-            </section>
 
-            <section class="content-block">
-                <div class="block-header">
-                    <h3>CONTROL DE CAJA CHICA POR TURNO</h3>
+                <div class="diff-indicator status-exact text-diff-box">
+                    <span>Diferencia</span><strong class="txt-diferencia">S/ 0.00</strong>
                 </div>
+
+                <button class="btn-close-shift-action btnCerrarTurno" data-turno="Mañana" disabled>
+                    <i class="fa-solid fa-lock"></i> Cerrar arqueo del turno
+                </button>
+            </div>
+        </article>
+
+        <article class="shift-card border-top-ocre" id="card-Tarde">
+            <div class="shift-card-header">
+                <span class="shift-name">🌤️ Tarde <small>14:00 - 22:00</small></span>
+                <span class="badge status-badge">Cerrado</span>
+            </div>
+            <div class="shift-card-body">
+                <p class="shift-user"><i class="fa-solid fa-user-clock"></i> <span class="recep-name">Cargando...</span></p>
                 
-                <div class="shifts-layout-grid">
-                    <article class="shift-card border-top-zocalo">
-                        <div class="shift-card-header">
-                            <span class="shift-name">🌞 Mañana <small>06:00 - 14:00</small></span>
-                            <span class="badge badge-success">Abierto</span>
-                        </div>
-                        <div class="shift-card-body">
-                            <p class="shift-user"><i class="fa-solid fa-user-clock"></i> <span id="recep_manana">Administrador</span></p>
-                            
-                            <div class="shift-row"><span>Caja inicial</span><strong>S/ 100.00</strong></div>
-                            <div class="shift-row txt-success"><span>Ingresos efectivo</span><strong>+ S/ 0.00</strong></div>
-                            <div class="shift-row txt-danger"><span>Total egresos</span><strong>- S/ 25.00</strong></div>
-                            
-                            <hr class="shift-divider">
-                            <div class="shift-row total-highlight"><span>Efectivo esperado</span><strong id="total_turno_manana">S/ 75.00</strong></div>
-                            
-                            <div class="conteo-real-box">
-                                <label>CONTEO FÍSICO REAL:</label>
-                                <div class="input-inline-group">
-                                    <input type="number" id="efectivo_fisico_real" placeholder="0.00" step="0.10">
-                                    <button class="btn-inline-add"><i class="fa-solid fa-plus"></i></button>
-                                </div>
-                            </div>
-
-                            <div class="diff-indicator status-exact">
-                                <span>Diferencia</span><strong id="diferencia">S/ 0.00</strong>
-                            </div>
-
-                            <button id="btnGuardarArqueo" class="btn-close-shift-action">
-                                <i class="fa-solid fa-lock"></i> Cerrar arqueo del turno
-                            </button>
-                        </div>
-                    </article>
-
-                    <article class="shift-card border-top-ocre">
-                        <div class="shift-card-header">
-                            <span class="shift-name">🌤️ Tarde <small>14:00 - 22:00</small></span>
-                            <span class="badge badge-muted">Cerrado</span>
-                        </div>
-                        <div class="shift-card-body">
-                            <p class="shift-user"><i class="fa-solid fa-user-clock"></i> <span id="recep_tarde">-</span></p>
-                            
-                            <div class="shift-row"><span>Caja inicial</span><strong>S/ 0.00</strong></div>
-                            <div class="shift-row txt-success"><span>Ingresos efectivo</span><strong>+ S/ 0.00</strong></div>
-                            <div class="shift-row txt-danger"><span>Total egresos</span><strong>- S/ 0.00</strong></div>
-                            
-                            <hr class="shift-divider">
-                            <div class="shift-row total-highlight"><span>Efectivo esperado</span><h4 id="total_turno_tarde" class="inline-h4">S/ 0.00</h4></div>
-                            
-                            <div class="conteo-real-box field-disabled">
-                                <label>CONTEO FÍSICO REAL:</label>
-                                <input type="number" placeholder="---.--" disabled>
-                            </div>
-
-                            <div class="sealed-message">
-                                <i class="fa-solid fa-lock-open"></i> Turno sellado
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="shift-card border-top-vino">
-                        <div class="shift-card-header">
-                            <span class="shift-name">🌙 Noche <small>22:00 - 06:00</small></span>
-                            <span class="badge badge-success">Abierto</span>
-                        </div>
-                        <div class="shift-card-body">
-                            <p class="shift-user"><i class="fa-solid fa-user-clock"></i> <span id="recep_noche">Fernanda</span></p>
-                            
-                            <div class="shift-row"><span>Caja inicial</span><strong>S/ 0.00</strong></div>
-                            <div class="shift-row txt-success"><span>Ingresos efectivo</span><strong>+ S/ 0.00</strong></div>
-                            <div class="shift-row txt-danger"><span>Total egresos</span><strong>- S/ 0.00</strong></div>
-                            
-                            <hr class="shift-divider">
-                            <div class="shift-row total-highlight"><span>Efectivo esperado</span><strong id="total_turno_noche">S/ 0.00</strong></div>
-                            
-                            <div class="conteo-real-box">
-                                <label>CONTEO FÍSICO REAL:</label>
-                                <input type="number" placeholder="0.00" step="0.10">
-                            </div>
-
-                            <div class="diff-indicator status-pending">
-                                <span><i class="fa-solid fa-circle-notch fa-spin"></i> Pendiente arqueo</span>
-                            </div>
-                        </div>
-                    </article>
+                <div class="shift-row"><span>Caja inicial</span><strong class="txt-apertura">S/ 0.00</strong></div>
+                <div class="shift-row txt-success"><span>Ingresos efectivo</span><strong class="txt-ingresos">+ S/ 0.00</strong></div>
+                <div class="shift-row txt-danger"><span>Total egresos</span><strong class="txt-egresos">- S/ 0.00</strong></div>
+                
+                <hr class="shift-divider">
+                <div class="shift-row total-highlight"><span>Efectivo esperado</span><strong class="txt-esperado">S/ 0.00</strong></div>
+                
+                <div class="conteo-real-box">
+                    <label>CONTEO FÍSICO REAL:</label>
+                    <div class="input-inline-group">
+                        <input type="number" class="input-fisico-real" placeholder="0.00" step="0.10" disabled>
+                    </div>
                 </div>
-            </section>
+
+                <div class="diff-indicator status-exact text-diff-box">
+                    <span>Diferencia</span><strong class="txt-diferencia">S/ 0.00</strong>
+                </div>
+
+                <button class="btn-close-shift-action btnCerrarTurno" data-turno="Tarde" disabled>
+                    <i class="fa-solid fa-lock"></i> Cerrar arqueo del turno
+                </button>
+            </div>
+        </article>
+
+        <article class="shift-card border-top-vino" id="card-Noche">
+            <div class="shift-card-header">
+                <span class="shift-name">🌙 Noche <small>22:00 - 07:00</small></span>
+                <span class="badge status-badge">Cerrado</span>
+            </div>
+            <div class="shift-card-body">
+                <p class="shift-user"><i class="fa-solid fa-user-clock"></i> <span class="recep-name">Cargando...</span></p>
+                
+                <div class="shift-row"><span>Caja inicial</span><strong class="txt-apertura">S/ 0.00</strong></div>
+                <div class="shift-row txt-success"><span>Ingresos efectivo</span><strong class="txt-ingresos">+ S/ 0.00</strong></div>
+                <div class="shift-row txt-danger"><span>Total egresos</span><strong class="txt-egresos">- S/ 0.00</strong></div>
+                
+                <hr class="shift-divider">
+                <div class="shift-row total-highlight"><span>Efectivo esperado</span><strong class="txt-esperado">S/ 0.00</strong></div>
+                
+                <div class="conteo-real-box">
+                    <label>CONTEO FÍSICO REAL:</label>
+                    <div class="input-inline-group">
+                        <input type="number" class="input-fisico-real" placeholder="0.00" step="0.10" disabled>
+                    </div>
+                </div>
+
+                <div class="diff-indicator status-exact text-diff-box">
+                    <span>Diferencia</span><strong class="txt-diferencia">S/ 0.00</strong>
+                </div>
+
+                <button class="btn-close-shift-action btnCerrarTurno" data-turno="Noche" disabled>
+                    <i class="fa-solid fa-lock"></i> Cerrar arqueo del turno
+                </button>
+            </div>
+        </article>
+    </div>
+</section>
 
             <section class="bottom-split-grid">
                 <article class="panel-card">
@@ -254,7 +262,7 @@
                     <div class="panel-card-title flex-space">
                         <h3><i class="fa-solid fa-clipboard-list text-vino"></i> Ocurrencias y/o Notas</h3>
                         <button id="btnAgregarOcurrencia" class="btn-save-log">
-                            <i class="fa-solid fa-plus"></i> Guardar en bitácora
+                            <i class="fa-solid fa-plus"></i> Guardar nota en el turno 
                         </button>
                     </div>
                     
