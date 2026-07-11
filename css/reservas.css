@@ -1,110 +1,215 @@
-/* --- HOTEL CENTRAL: GESTIÓN DE RESERVAS (VERSION PROFESIONAL) --- */
-
-
-
-:root {
-
-    --vino-tinto: #800020;
-
+ :root {
+   --vino-tinto: #800020;
     --amarillo-ocre: #d4a017;
-
     --marron-zocalo: #4a3728;
-
     --bg-light: #f8fafc;
-
     --border-color: #e2e8f0;
-
     --font-main: 'Lato', sans-serif;
-
     --font-titles: 'Playfair Display', serif;
-
     --success-green: #10b981;
-
     --danger-red: #f43f5e;
-
     --slate-600: #475569;
-
     --slate-400: #94a3b8;
 
+    --negro: #000000;
+    --blanco: #ffffff;
+
+    --font-base: 15px;
+    --font-title: 20px;
+    --font-nav: 14px;
+    --font-logout: 13px;
+    --font-kpi-label: 12px;
+    --font-kpi-num: 25px;
+    --font-card-sub: 16px;
 }
 
+/* 🖌️ PERSONALIZACIÓN UNIVERSAL DE LA BARRA DE DESPLAZAMIENTO */
 
+/* 1. Ancho y Estilo General */
+::-webkit-scrollbar {
+    width: 20px; /* Grosor elegante */
+    height: 20%; /* Para barras horizontales si existieran */
+}
+
+/* 2. El "Ca2ril" (Track) - Fondo de la barra */
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05); /* Muy sutil para no tapar el fondo */
+    border-radius: 10px;
+}
+
+/* 3. La Barrita que se mueve (Thumb) */
+::-webkit-scrollbar-thumb {
+    background: var(--amarillo-ocre); /* Tu color insignia */
+    border-radius: 10px;
+    border: 2px solid var(--blanco-colonial); /* Crea un pequeño borde para que resalte */
+}
+
+/* 4. Efecto al pasar el mouse (Hover) */
+::-webkit-scrollbar-thumb:hover {
+    background: var(--marron-zocalo); /* Cambia al color de los zócalos al tocarla */
+}
+
+/* 5. Soporte para Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--amarillo-ocre) transparent;
+}
+ 
+ body {
+            font-family: var(--font-main);
+            margin: 0;
+            background-color: #f1f5f9;
+            color: #334155;
+            display: flex; /* Usamos flexbox para alinear el Sidebar al lado del Contenido Principal */
+            height: 100vh;
+                overflow-y: auto;          /* Permite hacer scroll si el formulario es largo */
+
+        }
+
+        /* 1. DISEÑO DEL SIDEBAR (MENÚ LATERAL) */
+        .sidebar {
+            width: 215px; /* Ancho predeterminado cuando está abierto */
+            background-color: var(--blanco);  
+            color: var(--slate-400);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 10px;
+            box-sizing: border-box;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative;
+        }
+
+        /* 2. CLASE DE JAVASCRIPT: Se aplicará para contraer el menú */
+        .sidebar.colapsado {
+            width: 70px; 
+        }
+
+        /* Encabezado del menú (Logo o título de la app) */
+        .sidebar-header {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            padding-left: 10px;
+            white-space: nowrap; /* Evita que el texto se rompa en dos líneas al achicarse */
+            overflow: hidden; /* Oculta el texto excedente al colapsar */
+            color: var(--slate-600); 
+            font-family: var(--font-titles);
+        }
+
+        /* Lista de enlaces */
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Cada elemento/botón del menú */
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-decoration: none;
+            color: #94a3b8; /* Gris suave */
+        }
+
+        .menu-item:hover {
+            background-color: var(--vino-tinto); /* Color un poco más claro al pasar el mouse */
+            color: #ffffff;
+        }
+
+        /* Ícono simulado dentro de cada botón */
+        .icono {
+            font-size: 20px;
+            min-width: 35px; /* Mantiene un tamaño fijo para que no se mueva al colapsar */
+            display: inline-block;
+        }
+
+        /* Texto explicativo al lado del ícono */
+        .texto-enlace {
+            white-space: nowrap;
+            overflow: hidden;
+            transition: opacity 0.2s;
+            font-family: var(--font-titles);
+            color: var(--negro);
+        }
+
+        /* Cuando el menú esté colapsado, ocultamos los textos suavemente */
+        .sidebar.colapsado .texto-enlace {
+            opacity: 0;
+            pointer-events: none; /* Desactiva interacción con el texto invisible */
+        }
+
+
+        /* 3. CONTENIDO PRINCIPAL DE LA PÁGINA */
+        .contenido-principal {
+            flex: 1; /* Ocupa todo el espacio restante a la derecha del sidebar */
+            padding: 30px;
+            box-sizing: border-box;
+            background-color: #f8fafc;
+        }
+
+        /* Botón de hamburguesa o toggle de activación */
+        .btn-toggle {
+            background-color:var(--vino-tinto);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-toggle:hover {
+            background-color:var(--amarillo-ocre);
+            color: white;
+        }
 
 /* 1. ESTRUCTURA Y CABECERA */
-
 .page-header {
-
     display: flex;
-
     justify-content: space-between;
-
     align-items: center;
-
     margin-bottom: 30px;
-
 }
-
-
 
 .page-header h2 {
-
     font-family: var(--font-titles);
-
     color: var(--marron-zocalo);
-
     font-size: 26px;
-
     margin: 0;
-
 }
-
-
 
 /* 2. BOTONES GENERALES */
-
 .btn-add {
-
     background: var(--amarillo-ocre);
-
     color: var(--marron-zocalo);
-
     padding: 12px 24px;
-
     border-radius: 10px;
-
     border: none;
-
     font-weight: 700;
-
     cursor: pointer;
-
     display: flex;
-
     align-items: center;
-
     gap: 8px;
-
     transition: all 0.3s ease;
-
     font-size: 14px;
-
 }
-
-
 
 .btn-add:hover {
-
     background: var(--vino-tinto);
-
     color: white;
-
     transform: translateY(-2px);
-
     box-shadow: 0 4px 12px rgba(128, 0, 32, 0.2);
-
 }
-
-
 
 /* 3. KPIS (TARJETAS DE ESTADÍSTICAS) */
 .stats-grid {
@@ -149,7 +254,6 @@
 }
 
 /* 4. TABLA DE RESERVAS */
-
 .table-container {
     background: #fff;
     border-radius: 16px;
@@ -187,81 +291,51 @@
     text-transform: uppercase;
 }
 
-
 /* --- COLORES DE BADGES SEGÚN MEDIO DE RESERVA --- */
-.type-booking { 
-    background-color: #1e40af; 
-    color: #ffffff; 
+.type-booking {background-color: #1e40af; color: #ffffff;}
+
+.type-airbnb {background-color: #ff5a5f; color: #ffffff;}
+
+.type-expedia {background-color: #e09300; color: #ffffff;}
+
+.type-presencial {background-color: #7c3aed; color: #ffffff;}
+
+.type-whatsapp {background-color: #128c7e; color: #ffffff;}
+
+.type-telefono {background-color: #0284c7; color: #ffffff;}
+
+.type-dayuse {background-color: #db2777; color: #ffffff;}
+
+.type-gmail { background-color: #ea4335; color: #ffffff;}
+
+.type-otro {background-color: #6b7280; color: #ffffff;}
+
+/*------------------------------------------------------------------------------------- MODAL --------------------------------------------------------------- */
+.modal-reserva-overlay.active {
+    display: block !important;
 }
-
-.type-airbnb { 
-    background-color: #ff5a5f; 
-    color: #ffffff; 
-}
-
-.type-expedia { 
-    background-color: #e09300; /* Un ocre un poco más oscuro para que contraste bien con texto blanco */
-    color: #ffffff; 
-}
-
-/* El antiguo .type-directas ahora es presencial */
-.type-presencial { 
-    background-color: #7c3aed; 
-    color: #ffffff; 
-}
-
-/* Nuevo canal: WhatsApp */
-.type-whatsapp { 
-    background-color: #128c7e; 
-    color: #ffffff; 
-}
-
-.type-telefono { 
-    background-color: #0284c7; 
-    color: #ffffff; 
-}
-
-.type-dayuse { 
-    background-color: #db2777; 
-    color: #ffffff; 
-}
-
-.type-gmail { 
-    background-color: #ea4335; 
-    color: #ffffff; 
-}
-
-.type-otro { 
-    background-color: #6b7280; /* Gris elegante para casos varios */
-    color: #ffffff; 
-}
-
-
-/* 5. MODAL DE RESERVAS (ESTRUCTURA OPTIMIZADA CERO-SCROLL) */
 .modal-reserva-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(4px);
-    z-index: 10000;
-    align-items: center; 
-    justify-content: center;
+    display: none;             /* Oculto por defecto */
+    position: fixed;           /* Flota por encima del flujo normal */
+    z-index: 1000;             /* Asegura que esté sobre la tabla y el calendario */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente oscuro */
+    overflow-y: auto;          /* Permite hacer scroll si el formulario es largo */
 }
 
-.modal-reserva-overlay.active { display: flex; }
-
+/* La tarjeta blanca con el formulario */
 .modal-reserva-content {
-    background: #f1f5f9; 
-    border-radius: 15px;
-    width: 98%;
-    max-width: 1150px; 
-    max-height: 98vh; /* Aprovecha casi toda la pantalla vertical */
-    overflow: hidden;
+    background-color: #fff;
+    margin: 5% auto;           /* Centrado vertical y horizontal */
+    padding: 20px;
+    border-radius: 8px;
+    width: 100%;                /* Ajusta según prefieras */
+    max-width: 1000px;         /* Límite para que no se desarme en pantallas grandes */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     position: relative;
-    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
-    display: flex;
-    flex-direction: column;
 }
 
 .modal-reserva-header {
@@ -282,151 +356,213 @@
 .close-modal { font-size: 28px; cursor: pointer; line-height: 1; }
 .close-modal:hover { color: var(--amarillo-ocre); }
 
-/* 6. FORMULARIO COMPACTO (4 COLUMNAS) */
-.form-body-no-scroll {
-    padding: 20px 25px;
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;          /* Fuerza a esta sección a ocupar todo el espacio disponible */
-    overflow-y: auto;      /* Activa el scroll vertical solo en esta área si el contenido rebasa */
-    max-height: 100%;      /* No deja que empuje la barra de acciones hacia afuera */
-    
-    box-sizing: border-box;
+
+
+.dashboard-two-blocks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
 }
 
-.form-grid-compact {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 columnas fijas */
-    gap: 8px 15px;
+.block-section {
+    display: flex;
+    flex-direction: column;
 }
 
 .form-section-title {
-    grid-column: span 4;
-    font-family: var(--font-titles);
-    color: var(--vino-tinto);
-    font-size: 14px !important;
-    font-weight: 700;
-    margin: 8px 0 5px 0 !important;
-    padding-bottom: 3px;
-    border-bottom: 2px solid var(--amarillo-ocre);
+    font-size: var(--font-logout);
+    font-weight: bold;
+    color: var(--amarillo-ocre);
+    margin: 20px 0 10px 0;
+    letter-spacing: 0.5px;
+    border-left: 3px solid var(--amarillo-ocre);
+    padding-left: 8px;
 }
 
-/* Utilidades de Grid */
+.form-grid-custom {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 9px;
+}
+
 .span-2 { grid-column: span 2; }
-.span-3 { grid-column: span 3; }
 .span-4 { grid-column: span 4; }
 
-.form-group { display: flex; flex-direction: column; gap: 2px; }
-
 .form-group label {
-    font-size: 10px !important;
-    font-weight: 700;
-    color: var(--negro);
-    text-transform: uppercase;
-    margin-bottom: 2px;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
-.form-group input, 
+.form-group input,
 .form-group select {
-    padding: 6px 10px !important;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    font-size: 13px !important;
-    background: white;
-    height: 32px; /* Altura compacta */
-    transition: all 0.2s;
+    padding: 8px;
+    border: 1px solid var(--vino-tinto);
+    border-radius: 4px;
+    font-size: var(--font-base);
 }
 
-/* SECCIÓN DE PAGOS (ULTRA COMPACTA) */
+.form-group input:focus,
+.form-group select:focus {  
+    outline: none;
+    border-color: var(--amarillo-ocre);
+    box-shadow: 0 0 5px rgba(240, 177, 58, 0.5);
+}
+
+
+/* Bloques Destacados de Cálculos */
 .highlight-section {
-    background: #ffffff;
-    padding: 8px !important;
-    border-radius: 12px;
-    border: 1px dashed var(--slate-400);
-    gap: 5px 12px !important;
+    background-color: var(--bg-light);
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid var(--slate-400);
 }
 
-.input-total { 
-    background: #f0fdf4 !important; 
-    border: 1px solid var(--success-green) !important; 
-    color: #166534 !important; font-weight: 800;
+.total-soles-box {
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
 }
 
-.input-adelanto { 
-    background: #fffbeb !important; 
-    border: 1px solid var(--amarillo-ocre) !important; 
-    color: #92400e !important; font-weight: 700; 
+.registro-adelanto-box {
+    background-color: #f7fafc;
+    border: 1px solid #cbd5e0;
 }
 
-.input-diferencia { 
-    background: #fff1f2 !important; 
-    border: 1px solid var(--danger-red) !important; 
-    color: #9f1239 !important; font-weight: 800;
+/* Clases de Inputs Especiales y Readonly */
+input[readonly] {
+    background-color: #f1f5f9 !important; 
+    color: #4a5568 !important;
+    border: 1px solid #e2e8f0 !important;
+    cursor: not-allowed;
 }
 
-/* 7. ACCIONES FINALES */
-.form-actions-res {
-    padding: 10px 25px;
-    background: #f8fafc;
+.input-total, 
+.input-diferencia, 
+.input-readonly-bold {
+    font-weight: bold;
+}
+
+.input-diferencia-soles {
+    background-color: #fffaf0 !important; /* Tono crema de atención para saldos pendientes */
+    font-weight: bold;
+    color: var(--vino-tinto) !important;
+    border: 1px solid var(--marron-zocalo) !important;
+}
+
+.input-equivalente-soles {
+    background-color: #edf2f7 !important;
+    font-weight: bold;
+    border-color: var(--marron-zocalo) !important;
+}
+
+/* Componentes Únicos y Alineaciones */
+.flex-row-align {
+    display: flex; 
+    flex-direction: row !important; 
+    align-items: center; 
+    justify-content: space-between; 
+    gap: 8px; 
+    height: 36px; /* Alinea perfectamente con el flujo horizontal */
+}
+
+.flex-center-gap {
     display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    border-top: 1px solid var(--border-color);
-    flex-shrink: 0;
+    align-items: center;
+    gap: 5px;
 }
 
-.btn-save {
-    background: var(--vino-tinto);
-    color: white;
-    border: none;
-    padding: 10px 30px;
-    border-radius: 8px;
-    font-weight: 700;
+.label-bold-soft {
+    margin: 0;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: var(--font-kpi-label) !important;
+}
+
+.label-wine {
+    color: var(--vino-tinto) !important;
+}
+
+.input-recargo-preview {
+    width: 70px;
+    height: 26px !important; /* Ajuste interno compacto */
+    padding: 2px 4px !important;
+    font-size: 11px !important;
+    text-align: center;
+    background-color: #ffffff !important;
+    border: 1px dashed #cbd5e0 !important;
+    color: #4a5568;
+}
+
+.chk-custom {
+    width: 20px !important;
+    height: 20px !important;
     cursor: pointer;
 }
 
-.btn-cancel {
-    background: #e2e8f0;
-    color: var(--slate-600);
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-weight: 700;
-}
-
-/* Unifica estas reglas en una sola sección */
-.span-3 {
-    grid-column: span 3;
-}
-
-#statusDisponibilidad i {
-    font-size: 14px;
-}
-
-#statusDisponibilidad {
-    grid-column: span 4; /* Ocupa todo el ancho para centrar el mensaje */
+/* Botonera de Acción y Corrección de Contraste */
+.form-actions-res {
+    margin-top: 30px;
     display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+.btn-save {
+    background-color: var(--vino-tinto);
+    color: var(--amarillo-ocre);
+    border: none;
+    padding: 12px 32px;
+    font-size: var(--font-nav); /* 14px */
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(135, 40, 45, 0.2);
+    transition: all 0.2s ease;
+}
+
+.btn-save:hover {
+    background-color: var(--amarillo-ocre);
+    color: var(--vino-tinto);
+    box-shadow: 0 4px 8px rgba(135, 40, 45, 0.3);
+    transform: translateY(-1px);}
+
+/* Botón Limpiar - Estilo Boutique Hotel Central */
+.btn-formulario-limpiar {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 0; /* Sin padding inicial */
-    margin: 0;  /* Sin margen inicial */
-    transition: all 0.3s ease;
-    border-radius: 8px;
-    min-height: 0; /* Altura 0 cuando está vacío */
+    padding: 8px 16px;
+    background-color: var(--marron-zocalo); /* Gris claro sutil */
+    color: var(--bg-light);            /* Texto gris elegante */
+    border: 1px solid var(--vino-tinto);  /* Borde fino */
+    border-radius: 6px;        /* Esquinas ligeramente suavizadas */
+    font-family: inherit;
+    font-size: 13px;           /* Coherente con tus componentes secundarios */
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
 }
 
-/* Solo cuando tiene contenido se le aplica espacio */
-#statusDisponibilidad:not(:empty) {
-    padding: 8px;
-    margin: 5px 0 10px 0;
-    min-height: 35px;
-    background: #f8fafc; /* Fondo suave para resaltar el estado */
-    border: 1px solid #e2e8f0;
+/* Efecto al pasar el mouse */
+.btn-formulario-limpiar:hover {
+    background-color: var(--vino-tinto); /* Oscurece un poco el fondo */
+    color: var(--amarillo-ocre);            /* Texto un poco más oscuro */
+    border-color: var(--vino-tinto);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+/* Efecto al hacer click */
+.btn-formulario-limpiar:active {
+    transform: scale(0.98);
+}
 
 /* 8. RESPONSIVE DINÁMICO */
 @media (max-width: 1000px) {
